@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --paper: #eeeddb;
+    --paper-light: #f7f6ec;
+    --paper-card: #e8e6d3;
+    --paper-muted: #dedcc5;
+    --paper-dark: #cecbaf;
+    --ink: #171717;
+    --ink-muted: #53514a;
+    --ink-soft: #7a776e;
+    --ink-faint: #a29f95;
+    --accent: #8a493b;
+    --accent-hover: #71382c;
+    --accent-light: #f4e8e5;
+    --border-ink: rgba(23, 23, 23, 0.16);
+    --border-ink-strong: rgba(23, 23, 23, 0.85);
+  }
+
+  * {
+    border-color: var(--border-ink);
+  }
+
+  body {
+    background-color: var(--paper);
+    color: var(--ink);
+    font-family: "Noto Serif Bengali", "EB Garamond", Garamond, Georgia, "Times New Roman", serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Custom Typography Utilities */
+.font-serif-bengali {
+  font-family: "Noto Serif Bengali", "EB Garamond", Garamond, Georgia, serif;
+}
+
+.font-sans-bengali {
+  font-family: "Noto Sans Bengali", Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.font-mono-meta {
+  font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Vintage Editorial Elements */
+.broadsheet-rule {
+  border-bottom: 3px double rgba(23, 23, 23, 0.8);
+}
+
+.broadsheet-rule-thin {
+  border-bottom: 1px solid rgba(23, 23, 23, 0.2);
+}
+
+.broadsheet-rule-thick {
+  border-bottom: 2px solid rgba(23, 23, 23, 0.85);
+}
+
+.paper-grain {
+  background-color: var(--paper);
+  background-image: radial-gradient(rgba(23, 23, 23, 0.03) 1px, transparent 0);
+  background-size: 24px 24px;
+}
+
+/* Minimal Editorial Buttons */
+.btn-ink {
+  background-color: #171717;
+  color: #eeeddb;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-ink:hover {
+  background-color: #8a493b;
+  color: #f7f6ec;
+}
+
+.btn-outline-ink {
+  border: 1px solid rgba(23, 23, 23, 0.85);
+  color: #171717;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-outline-ink:hover {
+  background-color: #171717;
+  color: #eeeddb;
+}
+
+/* Editorial hairline dividers */
+.divider-hairline {
+  border-color: rgba(23, 23, 23, 0.15);
+}
+
+/* Hide scrollbar for clean horizontal scrolls if needed */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
