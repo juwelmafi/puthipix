@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node scripts/seed-database.mjs",
-    "test:cloud": "node scripts/test-cloud-services.mjs"
+    "test:cloud": "node scripts/test-cloud-services.mjs",
+    "test:e2e": "node scripts/e2e-health-check.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1161.0",
