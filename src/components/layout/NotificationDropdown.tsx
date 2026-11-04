@@ -21,7 +21,12 @@ export function NotificationDropdown() {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchNotifications = async () => {
     try {
@@ -78,6 +83,9 @@ export function NotificationDropdown() {
   const formatTime = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
+      if (!mounted) {
+        return "কিছুক্ষণ আগে";
+      }
       const diffMinutes = Math.floor((Date.now() - date.getTime()) / (1000 * 60));
       if (diffMinutes < 1) return "এইমাত্র";
       if (diffMinutes < 60) return `${diffMinutes} মিনিট আগে`;
@@ -223,3 +231,4 @@ export function NotificationDropdown() {
     </div>
   );
 }
+

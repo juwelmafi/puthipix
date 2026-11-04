@@ -386,3 +386,4 @@ export function PostComposer({ user, onPostCreated }: PostComposerProps) {
     </div>
   );
 }
+

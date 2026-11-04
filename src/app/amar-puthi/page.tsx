@@ -5,12 +5,13 @@ import { Masthead } from "@/components/layout/Masthead";
 import { Footer } from "@/components/layout/Footer";
 import { PostComposer } from "@/components/community/PostComposer";
 import { PostCard } from "@/components/community/PostCard";
+import { MOCK_COMMUNITY_POSTS } from "@/data/mockCommunityPosts";
 import { Feather, BookOpen, Sparkles, MessageSquare, Loader2 } from "lucide-react";
 
 export default function AmarPuthiPage() {
   const [user, setUser] = useState<{ name: string; email: string; role: string; userId?: string } | null>(null);
-  const [posts, setPosts] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [posts, setPosts] = useState<any[]>(MOCK_COMMUNITY_POSTS);
+  const [loading, setLoading] = useState(false);
   const [activeGenre, setActiveGenre] = useState("all");
 
   const genres = [
@@ -143,3 +144,4 @@ export default function AmarPuthiPage() {
     </div>
   );
 }
+

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import {
@@ -61,10 +61,18 @@ export function PostCard({ post, currentUser, onPostUpdated }: PostCardProps) {
   const [isExpandedText, setIsExpandedText] = useState(false);
   const [isCopied, setIsCopied] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const formatTime = (dateStr: string) => {
     try {
       const date = new Date(dateStr);
+      if (!mounted) {
+        return "কিছুক্ষণ আগে";
+      }
       const diffMinutes = Math.floor((Date.now() - date.getTime()) / (1000 * 60));
       if (diffMinutes < 1) return "এইমাত্র";
       if (diffMinutes < 60) return `${diffMinutes} মিনিট আগে`;
@@ -430,3 +438,4 @@ export function PostCard({ post, currentUser, onPostUpdated }: PostCardProps) {
     </article>
   );
 }
+

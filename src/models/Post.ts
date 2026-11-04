@@ -110,3 +110,4 @@ export const Post: Model<IPost> =
   mongoose.models.Post || mongoose.model<IPost>("Post", PostSchema);
 
 export default Post;
+

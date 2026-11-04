@@ -77,3 +77,4 @@ export const Notification: Model<INotification> =
   mongoose.model<INotification>("Notification", NotificationSchema);
 
 export default Notification;
+
