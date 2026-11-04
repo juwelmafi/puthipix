@@ -20,7 +20,9 @@ import {
   Database,
   Volume2,
   UploadCloud,
-  FileText
+  FileText,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { FileUploadZone } from "@/components/admin/FileUploadZone";
 
@@ -34,6 +36,12 @@ export default function AdminDashboardPage() {
   const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
+  const [editingBook, setEditingBook] = useState<any | null>(null);
+  const [deletingBook, setDeletingBook] = useState<any | null>(null);
+  const [isDeletingBook, setIsDeletingBook] = useState(false);
+  const [editingAudiobook, setEditingAudiobook] = useState<any | null>(null);
+  const [deletingAudiobook, setDeletingAudiobook] = useState<any | null>(null);
+  const [isDeletingAudiobook, setIsDeletingAudiobook] = useState(false);
   const [loading, setLoading] = useState(false);
   const [formError, setFormError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
@@ -149,6 +157,13 @@ export default function AdminDashboardPage() {
       }
 
       setSuccessMsg("পোস্টটি সফলভাবে অপসারণ করা হয়েছে এবং লেখককে কারণসহ নোটিফিকেশন পাঠানো হয়েছে।");
+      setCommunityPosts((prev) =>
+        prev.map((p) =>
+          p._id === deleteModalPost._id
+            ? { ...p, status: "deleted_by_admin", adminDeletionNote: deletionNote.trim() }
+            : p
+        )
+      );
       setDeleteModalPost(null);
       setDeletionNote("");
       fetchCommunityPosts();
@@ -159,56 +174,55 @@ export default function AdminDashboardPage() {
     }
   };
 
-  const handleCreateAudiobook = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const openAddBookModal = () => {
+    setEditingBook(null);
     setFormError("");
-
-    if (!audioFormData.audioUrl) {
-      setFormError("অনুগ্রহ করে শ্রুতিপাঠের অডিও ফাইলটি আপলোড করুন (Cloudflare R2-তে সরাসরি সংরক্ষিত হবে)।");
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const res = await fetch("/api/audiobooks", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(audioFormData),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "শ্রুতিপাঠ যুক্ত করতে সমস্যা হয়েছে");
-      }
-
-      setSuccessMsg("নতুন শ্রুতিপাঠ সফলভাবে মহাফেজখানায় যুক্ত হয়েছে!");
-      setShowAudioModal(false);
-      // Reset form
-      setAudioFormData({
-        title: "",
-        titleEn: "",
-        author: "",
-        narrator: "",
-        duration: "২৫ মিনিট",
-        audioUrl: "",
-        audioKey: "",
-        coverImage: "",
-        coverKey: "",
-        category: "ছোটগল্প ও কথাসাহিত্য",
-        categorySlug: "stories",
-        copyrightType: "public-domain",
-        description: "",
-      });
-      fetchAudiobooks();
-    } catch (err: any) {
-      setFormError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    setFormData({
+      title: "",
+      titleEn: "",
+      author: "",
+      translator: "",
+      description: "",
+      coverImage: "",
+      coverKey: "",
+      pdfUrl: "",
+      pdfKey: "",
+      genre: "উপন্যাস (Novels)",
+      genreSlug: "novels",
+      pageCount: 200,
+      language: "বাংলা",
+      edition: "উন্মুক্ত মহাফেজখানা সংস্করণ",
+      publishedYear: 1920,
+      publicDomain: true,
+    });
+    setShowModal(true);
   };
 
-  const handleCreateBook = async (e: React.FormEvent) => {
+  const openEditBookModal = (book: any) => {
+    setEditingBook(book);
+    setFormError("");
+    setFormData({
+      title: book.title || "",
+      titleEn: book.titleEn || "",
+      author: book.author || "",
+      translator: book.translator || "",
+      description: book.description || "",
+      coverImage: book.coverImage || "",
+      coverKey: book.coverKey || "",
+      pdfUrl: book.pdfUrl || "",
+      pdfKey: book.pdfKey || "",
+      genre: book.genre || "উপন্যাস (Novels)",
+      genreSlug: book.genreSlug || "novels",
+      pageCount: book.pageCount || 200,
+      language: book.language || "বাংলা",
+      edition: book.edition || "উন্মুক্ত মহাফেজখানা সংস্করণ",
+      publishedYear: book.publishedYear || 1920,
+      publicDomain: true,
+    });
+    setShowModal(true);
+  };
+
+  const handleSaveBook = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormError("");
 
@@ -220,48 +234,211 @@ export default function AdminDashboardPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/admin/books", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...formData,
-          price: 0,
-          accessType: "free",
-        }),
+      if (editingBook) {
+        const bookId = editingBook._id || editingBook.id || editingBook.slug;
+        const res = await fetch(`/api/admin/books/${bookId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            price: 0,
+            accessType: "free",
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "বইয়ের তথ্য আপডেট করতে সমস্যা হয়েছে");
+        }
+
+        setBooks((prev) =>
+          prev.map((b) =>
+            (b._id || b.id || b.slug) === bookId ? { ...b, ...formData } : b
+          )
+        );
+        setSuccessMsg(`"${formData.title}" গ্রন্থটির তথ্য সফলভাবে হালনাগাদ করা হয়েছে!`);
+      } else {
+        const res = await fetch("/api/admin/books", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ...formData,
+            price: 0,
+            accessType: "free",
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "বইটি তৈরি করতে ব্যর্থ হয়েছে");
+        }
+
+        setSuccessMsg("নতুন ধ্রুপদী গ্রন্থ সফলভাবে মহাফেজখানায় যুক্ত হয়েছে!");
+      }
+
+      setShowModal(false);
+      setEditingBook(null);
+      fetchBooks();
+    } catch (err: any) {
+      setFormError(err.message || "কার্যক্রম সম্পন্ন করতে ব্যর্থ হয়েছে");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteBook = async () => {
+    if (!deletingBook) return;
+    setIsDeletingBook(true);
+    setFormError("");
+
+    try {
+      const bookId = deletingBook._id || deletingBook.id || deletingBook.slug;
+      const res = await fetch(`/api/admin/books/${bookId}`, {
+        method: "DELETE",
       });
 
       const data = await res.json();
-
       if (!res.ok) {
-        throw new Error(data.error || "বইটি তৈরি করতে ব্যর্থ হয়েছে");
+        throw new Error(data.error || "বই মুছতে সমস্যা হয়েছে");
       }
 
-      setSuccessMsg("নতুন ধ্রুপদী গ্রন্থ সফলভাবে মহাফেজখানায় যুক্ত হয়েছে!");
-      setShowModal(false);
-      // Reset form
-      setFormData({
-        title: "",
-        titleEn: "",
-        author: "",
-        translator: "",
-        description: "",
-        coverImage: "",
-        coverKey: "",
-        pdfUrl: "",
-        pdfKey: "",
-        genre: "উপন্যাস (Novels)",
-        genreSlug: "novels",
-        pageCount: 200,
-        language: "বাংলা",
-        edition: "উন্মুক্ত মহাফেজখানা সংস্করণ",
-        publishedYear: 1920,
-        publicDomain: true,
-      });
+      setBooks((prev) =>
+        prev.filter((b) => (b._id || b.id || b.slug) !== bookId)
+      );
+      setSuccessMsg(`"${deletingBook.title}" গ্রন্থটি সফলভাবে মহাফেজখানা থেকে মুছে ফেলা হয়েছে!`);
+      setDeletingBook(null);
       fetchBooks();
     } catch (err: any) {
-      setFormError(err.message);
+      setFormError(err.message || "বই মুছতে সমস্যা হয়েছে");
+    } finally {
+      setIsDeletingBook(false);
+    }
+  };
+
+  const openAddAudiobookModal = () => {
+    setEditingAudiobook(null);
+    setFormError("");
+    setAudioFormData({
+      title: "",
+      titleEn: "",
+      author: "",
+      narrator: "",
+      duration: "২৫ মিনিট",
+      audioUrl: "",
+      audioKey: "",
+      coverImage: "",
+      coverKey: "",
+      category: "ছোটগল্প ও কথাসাহিত্য",
+      categorySlug: "stories",
+      copyrightType: "public-domain",
+      description: "",
+    });
+    setShowAudioModal(true);
+  };
+
+  const openEditAudiobookModal = (audio: any) => {
+    setEditingAudiobook(audio);
+    setFormError("");
+    setAudioFormData({
+      title: audio.title || "",
+      titleEn: audio.titleEn || "",
+      author: audio.author || "",
+      narrator: audio.narrator || "",
+      duration: audio.duration || "২৫ মিনিট",
+      audioUrl: audio.audioUrl || "",
+      audioKey: audio.audioKey || "",
+      coverImage: audio.coverImage || "",
+      coverKey: audio.coverKey || "",
+      category: audio.category || "ছোটগল্প ও কথাসাহিত্য",
+      categorySlug: audio.categorySlug || "stories",
+      copyrightType: audio.copyrightType || "public-domain",
+      description: audio.description || "",
+    });
+    setShowAudioModal(true);
+  };
+
+  const handleSaveAudiobook = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError("");
+
+    if (!audioFormData.audioUrl) {
+      setFormError("অনুগ্রহ করে শ্রুতিপাঠের অডিও ফাইলটি আপলোড করুন (Cloudflare R2-তে সরাসরি সংরক্ষিত হবে)।");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      if (editingAudiobook) {
+        const audioId = editingAudiobook._id || editingAudiobook.id || editingAudiobook.slug;
+        const res = await fetch(`/api/admin/audiobooks/${audioId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(audioFormData),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "শ্রুতিপাঠ আপডেট করতে সমস্যা হয়েছে");
+        }
+
+        setAudiobooks((prev) =>
+          prev.map((a) =>
+            (a._id || a.id || a.slug) === audioId ? { ...a, ...audioFormData } : a
+          )
+        );
+        setSuccessMsg(`"${audioFormData.title}" শ্রুতিপাঠটির তথ্য সফলভাবে হালনাগাদ করা হয়েছে!`);
+      } else {
+        const res = await fetch("/api/audiobooks", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(audioFormData),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "শ্রুতিপাঠ যুক্ত করতে সমস্যা হয়েছে");
+        }
+
+        setSuccessMsg("নতুন শ্রুতিপাঠ সফলভাবে মহাফেজখানায় যুক্ত হয়েছে!");
+      }
+
+      setShowAudioModal(false);
+      setEditingAudiobook(null);
+      fetchAudiobooks();
+    } catch (err: any) {
+      setFormError(err.message || "কার্যক্রম সম্পন্ন করতে ব্যর্থ হয়েছে");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDeleteAudiobook = async () => {
+    if (!deletingAudiobook) return;
+    setIsDeletingAudiobook(true);
+    setFormError("");
+
+    try {
+      const audioId = deletingAudiobook._id || deletingAudiobook.id || deletingAudiobook.slug;
+      const res = await fetch(`/api/admin/audiobooks/${audioId}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "শ্রুতিপাঠ মুছতে সমস্যা হয়েছে");
+      }
+
+      setAudiobooks((prev) =>
+        prev.filter((a) => (a._id || a.id || a.slug) !== audioId)
+      );
+      setSuccessMsg(`"${deletingAudiobook.title}" শ্রুতিপাঠটি সফলভাবে মুছে ফেলা হয়েছে!`);
+      setDeletingAudiobook(null);
+      fetchAudiobooks();
+    } catch (err: any) {
+      setFormError(err.message || "শ্রুতিপাঠ মুছতে সমস্যা হয়েছে");
+    } finally {
+      setIsDeletingAudiobook(false);
     }
   };
 
@@ -396,7 +573,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <button
-                onClick={() => setShowModal(true)}
+                onClick={openAddBookModal}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#171717] text-[#eeeddb] text-xs font-serif-bengali font-bold hover:bg-[#8a493b] transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -450,15 +627,31 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        <div className="inline-flex items-center gap-2">
+                        <div className="inline-flex items-center gap-1.5">
                           <Link
                             href={`/books/${b.slug}`}
                             target="_blank"
-                            className="p-1 hover:text-[#8a493b] text-[#53514a]"
+                            className="p-1.5 hover:text-[#8a493b] text-[#53514a] hover:bg-[#e8e6d3] rounded transition-colors"
                             title="বিবরণী দেখুন"
                           >
                             <Eye className="w-4 h-4" />
                           </Link>
+                          <button
+                            type="button"
+                            onClick={() => openEditBookModal(b)}
+                            className="p-1.5 hover:text-[#8a493b] text-[#53514a] hover:bg-[#e8e6d3] rounded transition-colors"
+                            title="সম্পাদনা করুন"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingBook(b)}
+                            className="p-1.5 hover:text-red-700 text-[#53514a] hover:bg-red-50 rounded transition-colors"
+                            title="মুছে ফেলুন"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -494,7 +687,7 @@ export default function AdminDashboardPage() {
               </div>
 
               <button
-                onClick={() => setShowAudioModal(true)}
+                onClick={openAddAudiobookModal}
                 className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#8a493b] text-[#eeeddb] text-xs font-serif-bengali font-bold hover:bg-[#171717] transition-colors"
               >
                 <Plus className="w-4 h-4" />
@@ -513,7 +706,7 @@ export default function AdminDashboardPage() {
                     <th className="p-3">সময়কাল</th>
                     <th className="p-3">ক্যাটাগরি</th>
                     <th className="p-3">কপিরাইট মর্যাদা</th>
-                    <th className="p-3 text-right">শুনুন</th>
+                    <th className="p-3 text-right">কার্যক্রম</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[rgba(23,23,23,0.1)]">
@@ -563,14 +756,32 @@ export default function AdminDashboardPage() {
                         </span>
                       </td>
                       <td className="p-3 text-right">
-                        <Link
-                          href={`/audiobooks/${a.slug}`}
-                          target="_blank"
-                          className="inline-flex items-center gap-1 text-xs text-[#8a493b] hover:underline"
-                        >
-                          <Headphones className="w-3.5 h-3.5" />
-                          <span>প্লেয়ার</span>
-                        </Link>
+                        <div className="inline-flex items-center gap-1.5">
+                          <Link
+                            href={`/audiobooks/${a.slug}`}
+                            target="_blank"
+                            className="p-1.5 hover:text-[#8a493b] text-[#53514a] hover:bg-[#e8e6d3] rounded transition-colors"
+                            title="প্লেয়ার শুনুন"
+                          >
+                            <Headphones className="w-4 h-4" />
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => openEditAudiobookModal(a)}
+                            className="p-1.5 hover:text-[#8a493b] text-[#53514a] hover:bg-[#e8e6d3] rounded transition-colors"
+                            title="সম্পাদনা করুন"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeletingAudiobook(a)}
+                            className="p-1.5 hover:text-red-700 text-[#53514a] hover:bg-red-50 rounded transition-colors"
+                            title="মুছে ফেলুন"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -701,16 +912,24 @@ export default function AdminDashboardPage() {
         )}
       </main>
 
-      {/* Add New Book Modal */}
+      {/* Book Add/Edit Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
           <div className="max-w-2xl w-full bg-[#eeeddb] border-2 border-[#171717] p-6 shadow-2xl my-8">
             <div className="flex justify-between items-center pb-3 border-b border-[rgba(23,23,23,0.18)] mb-4">
-              <h3 className="text-xl font-serif-bengali font-bold text-[#171717]">
-                নতুন ধ্রুপদী গ্রন্থ সংযোজন
+              <h3 className="text-xl font-serif-bengali font-bold text-[#171717] flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#8a493b]" />
+                <span>
+                  {editingBook
+                    ? `ধ্রুপদী গ্রন্থ সম্পাদনা — ${editingBook.title}`
+                    : "নতুন ধ্রুপদী গ্রন্থ সংযোজন"}
+                </span>
               </h3>
               <button
-                onClick={() => setShowModal(false)}
+                onClick={() => {
+                  setShowModal(false);
+                  setEditingBook(null);
+                }}
                 className="text-[#53514a] hover:text-[#171717]"
               >
                 <X className="w-5 h-5" />
@@ -724,7 +943,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateBook} className="space-y-4 text-xs font-serif-bengali">
+            <form onSubmit={handleSaveBook} className="space-y-4 text-xs font-serif-bengali">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-mono-meta uppercase text-[#53514a] mb-1">
@@ -864,7 +1083,10 @@ export default function AdminDashboardPage() {
               <div className="pt-4 border-t border-[rgba(23,23,23,0.18)] flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
+                  onClick={() => {
+                    setShowModal(false);
+                    setEditingBook(null);
+                  }}
                   className="px-4 py-2 border border-black/30 hover:bg-black/5"
                 >
                   বাতিল
@@ -874,7 +1096,11 @@ export default function AdminDashboardPage() {
                   disabled={loading}
                   className="px-6 py-2 bg-[#171717] text-[#eeeddb] font-bold hover:bg-[#8a493b] transition-colors disabled:opacity-50"
                 >
-                  {loading ? "সংরক্ষণ করা হচ্ছে..." : "মহাফেজখানায় যুক্ত করুন"}
+                  {loading
+                    ? "সংরক্ষণ করা হচ্ছে..."
+                    : editingBook
+                    ? "পরিবর্তন সংরক্ষণ করুন"
+                    : "মহাফেজখানায় যুক্ত করুন"}
                 </button>
               </div>
             </form>
@@ -882,17 +1108,24 @@ export default function AdminDashboardPage() {
         </div>
       )}
 
-      {/* Add New Audiobook Modal */}
+      {/* Audiobook Add/Edit Modal */}
       {showAudioModal && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4 overflow-y-auto">
           <div className="max-w-2xl w-full bg-[#eeeddb] border-2 border-[#171717] p-6 shadow-2xl my-8">
             <div className="flex justify-between items-center pb-3 border-b border-[rgba(23,23,23,0.18)] mb-4">
               <h3 className="text-xl font-serif-bengali font-bold text-[#171717] flex items-center gap-2">
                 <Headphones className="w-5 h-5 text-[#8a493b]" />
-                <span>নতুন শ্রুতিপাঠ / অডিওবুক সংযোজন</span>
+                <span>
+                  {editingAudiobook
+                    ? `শ্রুতিপাঠ সম্পাদনা — ${editingAudiobook.title}`
+                    : "নতুন শ্রুতিপাঠ / অডিওবুক সংযোজন"}
+                </span>
               </h3>
               <button
-                onClick={() => setShowAudioModal(false)}
+                onClick={() => {
+                  setShowAudioModal(false);
+                  setEditingAudiobook(null);
+                }}
                 className="text-[#53514a] hover:text-[#171717]"
               >
                 <X className="w-5 h-5" />
@@ -906,7 +1139,7 @@ export default function AdminDashboardPage() {
               </div>
             )}
 
-            <form onSubmit={handleCreateAudiobook} className="space-y-4 text-xs font-serif-bengali">
+            <form onSubmit={handleSaveAudiobook} className="space-y-4 text-xs font-serif-bengali">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block font-mono-meta uppercase text-[#53514a] mb-1">
@@ -1061,7 +1294,10 @@ export default function AdminDashboardPage() {
               <div className="pt-4 border-t border-[rgba(23,23,23,0.18)] flex justify-end gap-3">
                 <button
                   type="button"
-                  onClick={() => setShowAudioModal(false)}
+                  onClick={() => {
+                    setShowAudioModal(false);
+                    setEditingAudiobook(null);
+                  }}
                   className="px-4 py-2 border border-black/30 hover:bg-black/5"
                 >
                   বাতিল
@@ -1071,7 +1307,11 @@ export default function AdminDashboardPage() {
                   disabled={loading}
                   className="px-6 py-2 bg-[#8a493b] text-[#eeeddb] font-bold hover:bg-[#171717] transition-colors disabled:opacity-50"
                 >
-                  {loading ? "সংরক্ষণ করা হচ্ছে..." : "শ্রুতিপাঠ মহাফেজখানায় যুক্ত করুন"}
+                  {loading
+                    ? "সংরক্ষণ করা হচ্ছে..."
+                    : editingAudiobook
+                    ? "পরিবর্তন সংরক্ষণ করুন"
+                    : "শ্রুতিপাঠ মহাফেজখানায় যুক্ত করুন"}
                 </button>
               </div>
             </form>
@@ -1137,6 +1377,108 @@ export default function AdminDashboardPage() {
                 className="px-4 py-2 bg-red-700 text-white font-bold hover:bg-red-800 transition-colors disabled:opacity-50"
               >
                 {isDeletingPost ? "অপসারিত হচ্ছে..." : "নোটসহ অপসারণ করুন"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Book Modal */}
+      {deletingBook && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-[#eeeddb] border-2 border-[#171717] p-6 shadow-2xl font-serif-bengali space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-black/15">
+              <h3 className="text-base font-bold text-red-800 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-700" />
+                <span>গ্রন্থ অপসারণ নিশ্চিতকরণ</span>
+              </h3>
+              <button
+                onClick={() => setDeletingBook(null)}
+                className="text-[#53514a] hover:text-[#171717]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-[#262626] space-y-1 bg-[#ede9d6] p-3 border border-black/10">
+              <p>
+                <strong className="text-[#171717]">বইয়ের নাম:</strong> {deletingBook.title}
+              </p>
+              <p>
+                <strong className="text-[#171717]">লেখক:</strong> {deletingBook.author}
+              </p>
+            </div>
+
+            <p className="text-xs text-red-700 font-semibold">
+              সতর্কতা: এই বইটি মহাফেজখানা থেকে সম্পূর্ণ মুছে ফেলা হবে। আপনি কি নিশ্চিত?
+            </p>
+
+            <div className="pt-2 flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setDeletingBook(null)}
+                className="px-4 py-2 border border-black/30 hover:bg-black/5"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingBook}
+                onClick={handleDeleteBook}
+                className="px-4 py-2 bg-red-700 text-white font-bold hover:bg-red-800 transition-colors disabled:opacity-50"
+              >
+                {isDeletingBook ? "মুছে ফেলা হচ্ছে..." : "হ্যাঁ, মুছে ফেলুন"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Audiobook Modal */}
+      {deletingAudiobook && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-[#eeeddb] border-2 border-[#171717] p-6 shadow-2xl font-serif-bengali space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-black/15">
+              <h3 className="text-base font-bold text-red-800 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-700" />
+                <span>শ্রুতিপাঠ অপসারণ নিশ্চিতকরণ</span>
+              </h3>
+              <button
+                onClick={() => setDeletingAudiobook(null)}
+                className="text-[#53514a] hover:text-[#171717]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-[#262626] space-y-1 bg-[#ede9d6] p-3 border border-black/10">
+              <p>
+                <strong className="text-[#171717]">শ্রুতিপাঠ:</strong> {deletingAudiobook.title}
+              </p>
+              <p>
+                <strong className="text-[#171717]">বাচিক শিল্পী:</strong> {deletingAudiobook.narrator}
+              </p>
+            </div>
+
+            <p className="text-xs text-red-700 font-semibold">
+              সতর্কতা: এই শ্রুতিপাঠটি মহাফেজখানা থেকে মুছে ফেলা হবে। আপনি কি নিশ্চিত?
+            </p>
+
+            <div className="pt-2 flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setDeletingAudiobook(null)}
+                className="px-4 py-2 border border-black/30 hover:bg-black/5"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingAudiobook}
+                onClick={handleDeleteAudiobook}
+                className="px-4 py-2 bg-red-700 text-white font-bold hover:bg-red-800 transition-colors disabled:opacity-50"
+              >
+                {isDeletingAudiobook ? "মুছে ফেলা হচ্ছে..." : "হ্যাঁ, মুছে ফেলুন"}
               </button>
             </div>
           </div>

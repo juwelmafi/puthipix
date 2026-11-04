@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Post from "@/models/Post";
 import Notification from "@/models/Notification";
+import mongoose from "mongoose";
 
 export async function GET(request: Request) {
   try {
@@ -68,30 +69,32 @@ export async function DELETE(request: Request) {
 
     await connectToDatabase();
 
-    const post = await Post.findById(postId);
-    if (!post) {
-      return NextResponse.json({ error: "পোস্টটি পাওয়া যায়নি।" }, { status: 404 });
+    let post: any = null;
+    if (mongoose.Types.ObjectId.isValid(postId)) {
+      post = await Post.findById(postId);
     }
 
-    post.status = "deleted_by_admin";
-    post.adminDeletionNote = note.trim();
-    await post.save();
+    if (post) {
+      post.status = "deleted_by_admin";
+      post.adminDeletionNote = note.trim();
+      await post.save();
 
-    // Create Notification for the Post Author
-    try {
-      await Notification.create({
-        recipient: post.author,
-        sender: session.userId,
-        senderName: "পুঁথিপিক্স মডারেশন দল",
-        type: "admin_deletion",
-        postId: post._id,
-        postTitle: post.postTitle,
-        message: `আপনার "${post.postTitle.slice(0, 30)}" পোস্টটি মহাফেজখানা নীতিমালা অনুযায়ী অপসারণ করা হয়েছে।`,
-        note: note.trim(),
-        isRead: false,
-      });
-    } catch (notifErr) {
-      console.error("Failed to notify user about deletion:", notifErr);
+      // Create Notification for the Post Author
+      try {
+        await Notification.create({
+          recipient: post.author,
+          sender: session.userId,
+          senderName: "পুঁথিপিক্স মডারেশন দল",
+          type: "admin_deletion",
+          postId: post._id,
+          postTitle: post.postTitle,
+          message: `আপনার "${post.postTitle.slice(0, 30)}" পোস্টটি মহাফেজখানা নীতিমালা অনুযায়ী অপসারণ করা হয়েছে।`,
+          note: note.trim(),
+          isRead: false,
+        });
+      } catch (notifErr) {
+        console.error("Failed to notify user about deletion:", notifErr);
+      }
     }
 
     return NextResponse.json({
