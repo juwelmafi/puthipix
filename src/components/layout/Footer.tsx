@@ -1,6 +1,12 @@
+"use client";
+
 import Link from "next/link";
+import { useSiteContent } from "@/context/SiteContentContext";
 
 export function Footer() {
+  const { content } = useSiteContent();
+  const { footer } = content;
+
   return (
     <footer className="w-full bg-[#e8e6d3] border-t-2 border-[#171717] mt-auto">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -8,15 +14,13 @@ export function Footer() {
           {/* Brand & Manifesto */}
           <div className="md:col-span-2 space-y-3">
             <h3 className="text-2xl font-serif-bengali font-semibold text-[#171717]">
-              পুঁথিপিক্স / Puthipix
+              {footer.brandTitle}
             </h3>
             <p className="text-xs sm:text-sm text-[#53514a] font-serif-bengali leading-relaxed max-w-md">
-              বাংলা ভাষা ও সাহিত্যের ধ্রুপদী সৃষ্টিসমূহের এক উন্মুক্ত ও নিভৃত ডিজিটাল পাঠাগার।
-              রবীন্দ্রনাথ, শরৎচন্দ্র, বঙ্কিম, রোকেয়া সহ কালজয়ী সাহিত্যিকদের লেখা কোনো বিজ্ঞাপন
-              বা আর্থিক লেনদেন ছাড়াই সম্পূর্ণ বিনামূল্যে যে কেউ অনলাইনে পাঠ করতে পারেন।
+              {footer.aboutText}
             </p>
             <p className="text-[11px] font-mono-meta text-[#7a776e]">
-              উন্মুক্ত মহাফেজখানা • শতভাগ বিনামূল্যে মুক্তপাঠ • পাবলিক ডোমেইন সংরক্ষণ
+              {footer.tagline}
             </p>
           </div>
 
@@ -86,9 +90,9 @@ export function Footer() {
 
         {/* Bottom Bar */}
         <div className="flex flex-col sm:flex-row items-center justify-between text-[11px] font-mono-meta text-[#7a776e] gap-4">
-          <p>© 2026 পুঁথিপিক্স। বাংলা সাহিত্যের উন্মুক্ত মহাফেজখানা।</p>
+          <p>{footer.copyrightText}</p>
           <p className="text-center sm:text-right">
-            জ্ঞান ও সাহিত্যের সর্বজনীন প্রসারে নিবেদিত এক শান্ত পাঠাগার।
+            {footer.bottomNote}
           </p>
         </div>
       </div>

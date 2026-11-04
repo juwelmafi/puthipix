@@ -5,11 +5,14 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, Search, User, LogIn, LogOut, Shield, Feather, Sparkles } from "lucide-react";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
+import { useSiteContent } from "@/context/SiteContentContext";
 
 export function Masthead() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+  const { content } = useSiteContent();
+  const { header } = content;
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -44,19 +47,34 @@ export function Masthead() {
 
   return (
     <header className="w-full bg-[#eeeddb] border-b border-[rgba(23,23,23,0.18)]">
+      {/* Optional Announcement Banner */}
+      {header.announcementEnabled && header.announcementText && (
+        <div className="bg-[#8a493b] text-[#eeeddb] px-3 py-1.5 text-center text-[11px] sm:text-xs font-serif-bengali font-semibold flex items-center justify-center gap-2 border-b border-black/20">
+          <span>{header.announcementText}</span>
+          {header.announcementLink && (
+            <Link
+              href={header.announcementLink}
+              className="underline hover:text-white text-[10px] sm:text-[11px] font-mono-meta ml-1 font-bold"
+            >
+              বিস্তারিত →
+            </Link>
+          )}
+        </div>
+      )}
+
       {/* Top Information Bar */}
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
         <div className="py-1.5 border-b border-[rgba(23,23,23,0.12)] flex items-center justify-between text-[10px] sm:text-[11px] font-mono-meta text-[#53514a] uppercase tracking-wider">
           <div className="flex items-center gap-2 sm:gap-3 truncate">
-            <span>ঢাকা, বাংলাদেশ</span>
+            <span>{header.topBarLocation}</span>
             <span className="opacity-40">•</span>
-            <span className="hidden sm:inline">ভলিউম ০১ / সংখ্যা ২০২৬</span>
+            <span className="hidden sm:inline">{header.topBarVolume}</span>
             <span className="opacity-40 hidden sm:inline">•</span>
-            <span className="truncate">উন্মুক্ত মহাফেজখানা</span>
+            <span className="truncate">{header.topBarArchiveText}</span>
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4 shrink-0">
-            <span className="text-[#8a493b] font-medium hidden md:inline">শতভাগ বিনামূল্যে উন্মুক্ত পাঠ</span>
+            <span className="text-[#8a493b] font-medium hidden md:inline">{header.topBarBadge}</span>
             <span className="opacity-40 hidden md:inline">•</span>
 
             {user ? (
@@ -115,15 +133,15 @@ export function Masthead() {
           <div className="inline-block">
             <Link href="/" className="group inline-flex flex-col items-center">
               <span className="text-3xl sm:text-6xl md:text-7xl font-serif-bengali font-normal tracking-tight text-[#171717] transition-opacity group-hover:opacity-90">
-                পুঁথিপিক্স
+                {header.brandNameBn}
               </span>
               <span className="text-[10px] sm:text-xs font-serif-bengali italic tracking-widest text-[#7a776e] mt-0.5 sm:mt-1 uppercase">
-                PUTHIPIX • OPEN LITERARY ARCHIVE & READING ROOM
+                {header.brandTagline}
               </span>
             </Link>
           </div>
           <p className="max-w-xl mx-auto mt-1 sm:mt-1.5 text-[11px] sm:text-xs text-[#53514a] font-serif-bengali italic px-2 line-clamp-1 sm:line-clamp-none">
-            &ldquo;জ্ঞান ও সাহিত্যের উন্মুক্ত বিস্তার, যেখানে পাঠক সরাসরি পর্দায় নিমগ্ন হয়ে পাঠ করতে পারেন।&rdquo;
+            {header.mastheadQuote}
           </p>
         </div>
 

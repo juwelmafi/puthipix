@@ -23,14 +23,23 @@ import {
   FileText,
   Edit,
   Trash2,
+  Sliders,
+  Globe,
+  Shield,
+  ExternalLink,
 } from "lucide-react";
 import { FileUploadZone } from "@/components/admin/FileUploadZone";
+import { CmsContentEditor } from "@/components/admin/CmsContentEditor";
+import { SeoSettingsEditor } from "@/components/admin/SeoSettingsEditor";
+import { DEFAULT_SITE_CONTENT, SiteContent } from "@/data/defaultSiteContent";
 
 export default function AdminDashboardPage() {
-  const [adminTab, setAdminTab] = useState<"books" | "audiobooks" | "community">("books");
+  const [adminTab, setAdminTab] = useState<"books" | "audiobooks" | "community" | "cms" | "seo">("books");
   const [books, setBooks] = useState<any[]>(MOCK_BOOKS);
   const [audiobooks, setAudiobooks] = useState<any[]>(MOCK_AUDIOBOOKS);
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
+  const [cmsContent, setCmsContent] = useState<SiteContent>(DEFAULT_SITE_CONTENT);
+  const [isSavingCms, setIsSavingCms] = useState(false);
   const [deleteModalPost, setDeleteModalPost] = useState<any | null>(null);
   const [deletionNote, setDeletionNote] = useState("");
   const [isDeletingPost, setIsDeletingPost] = useState(false);
@@ -126,10 +135,55 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Load site CMS & SEO content
+  const fetchCmsContent = async () => {
+    try {
+      const res = await fetch("/api/admin/site-settings");
+      if (res.ok) {
+        const data = await res.json();
+        if (data.success && data.content) {
+          setCmsContent(data.content);
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch site settings, using default");
+    }
+  };
+
+  const handleSaveCmsSettings = async () => {
+    setIsSavingCms(true);
+    setFormError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch("/api/admin/site-settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: cmsContent }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "সংরক্ষণ করতে সমস্যা হয়েছে");
+      }
+      setSuccessMsg("সাইটের সম্পূর্ণ কনটেন্ট ও এসইও সেটিংস সফলভাবে সংরক্ষিত হয়েছে!");
+    } catch (err: any) {
+      setFormError(err.message || "সংরক্ষণ করতে সমস্যা হয়েছে");
+    } finally {
+      setIsSavingCms(false);
+    }
+  };
+
+  const handleResetCmsDefaults = () => {
+    if (confirm("আপনি কি নিশ্চিতভাবে সাইটের সকল কনটেন্ট মূল ডিফল্ট লেখায় ফিরিয়ে নিতে চান?")) {
+      setCmsContent(DEFAULT_SITE_CONTENT);
+      setSuccessMsg("সকল ফিল্ড মূল ডিফল্ট লেখায় পুনরুদ্ধার করা হয়েছে। পরিবর্তন কার্যকর করতে 'সংরক্ষণ করুন' বাটনে ক্লিক করুন।");
+    }
+  };
+
   useEffect(() => {
     fetchBooks();
     fetchAudiobooks();
     fetchCommunityPosts();
+    fetchCmsContent();
   }, []);
 
   const handleDeletePostWithNote = async () => {
@@ -475,91 +529,183 @@ export default function AdminDashboardPage() {
         </div>
       </header>
 
-      {/* Main Admin Content Container */}
-      <main className="max-w-7xl mx-auto w-full px-4 sm:px-8 py-8 flex-grow space-y-8">
-        {/* Success Alert */}
-        {successMsg && (
-          <div className="p-3 bg-emerald-100 border border-emerald-400 text-emerald-800 text-xs font-serif-bengali flex items-center justify-between">
-            <span>{successMsg}</span>
-            <button onClick={() => setSuccessMsg("")} className="text-emerald-800 hover:text-black">
-              <X className="w-4 h-4" />
-            </button>
-          </div>
-        )}
+      {/* Main Admin 2-Column Workspace with Left Sticky Sidebar */}
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6 flex-grow">
+        {/* Left Sticky Sidebar */}
+        <aside className="w-full lg:w-72 shrink-0 lg:sticky lg:top-4 self-start space-y-4">
+          <div className="bg-[#f4f2e4] border-2 border-[#171717] p-4 shadow-sm space-y-3">
+            <div className="border-b border-black/15 pb-2 flex items-center justify-between">
+              <div>
+                <span className="font-mono-meta text-[10px] text-[#8a493b] uppercase tracking-wider block font-bold">
+                  ADMIN NAVIGATION
+                </span>
+                <h3 className="font-serif-bengali font-bold text-sm text-[#171717]">
+                  ড্যাশবোর্ড নিয়ন্ত্রণ
+                </h3>
+              </div>
+              <Shield className="w-4 h-4 text-[#8a493b]" />
+            </div>
 
-        {/* Archive Metric Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-[#f4f2e4] border-2 border-[#171717] p-4 space-y-1">
-            <span className="text-[11px] font-mono-meta text-[#7a776e] uppercase">মোট সংরক্ষিত গ্রন্থ</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-mono-meta font-bold text-[#171717]">{totalBooks}</span>
-              <BookOpen className="w-5 h-5 text-[#171717]" />
+            {/* Vertical Tabs List */}
+            <nav className="space-y-1.5 font-serif-bengali text-xs">
+              <button
+                type="button"
+                onClick={() => setAdminTab("books")}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between transition-all ${
+                  adminTab === "books"
+                    ? "bg-[#171717] text-[#eeeddb] font-bold shadow-xs"
+                    : "bg-[#e8e6d3] text-[#262626] hover:bg-[#dedbc5]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen className="w-4 h-4 text-[#e8c078]" />
+                  <span>গ্রন্থ মহাফেজখানা</span>
+                </div>
+                <span
+                  className={`text-[10px] font-mono-meta px-1.5 py-0.2 rounded font-bold ${
+                    adminTab === "books" ? "bg-[#8a493b] text-white" : "bg-black/10 text-[#171717]"
+                  }`}
+                >
+                  {totalBooks}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdminTab("audiobooks")}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between transition-all ${
+                  adminTab === "audiobooks"
+                    ? "bg-[#171717] text-[#eeeddb] font-bold shadow-xs"
+                    : "bg-[#e8e6d3] text-[#262626] hover:bg-[#dedbc5]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Headphones className="w-4 h-4 text-[#e8c078]" />
+                  <span>শ্রুতিপাঠ ও অডিওবুক</span>
+                </div>
+                <span
+                  className={`text-[10px] font-mono-meta px-1.5 py-0.2 rounded font-bold ${
+                    adminTab === "audiobooks" ? "bg-[#8a493b] text-white" : "bg-black/10 text-[#171717]"
+                  }`}
+                >
+                  {audiobooks.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdminTab("community")}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between transition-all ${
+                  adminTab === "community"
+                    ? "bg-[#171717] text-[#eeeddb] font-bold shadow-xs"
+                    : "bg-[#e8e6d3] text-[#262626] hover:bg-[#dedbc5]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Feather className="w-4 h-4 text-[#e8c078]" />
+                  <span>আমার পুঁথি নিয়ন্ত্রণ</span>
+                </div>
+                <span
+                  className={`text-[10px] font-mono-meta px-1.5 py-0.2 rounded font-bold ${
+                    adminTab === "community" ? "bg-[#8a493b] text-white" : "bg-black/10 text-[#171717]"
+                  }`}
+                >
+                  {communityPosts.length}
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdminTab("cms")}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between transition-all ${
+                  adminTab === "cms"
+                    ? "bg-[#171717] text-[#eeeddb] font-bold shadow-xs"
+                    : "bg-[#e8e6d3] text-[#262626] hover:bg-[#dedbc5]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Sliders className="w-4 h-4 text-[#e8c078]" />
+                  <span>সাইট কনটেন্ট সিএমএস</span>
+                </div>
+                <span className="text-[9px] uppercase font-mono-meta bg-amber-600/30 text-amber-900 px-1.5 py-0.2 rounded font-bold">
+                  CMS
+                </span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setAdminTab("seo")}
+                className={`w-full text-left px-3 py-2.5 flex items-center justify-between transition-all ${
+                  adminTab === "seo"
+                    ? "bg-[#171717] text-[#eeeddb] font-bold shadow-xs"
+                    : "bg-[#e8e6d3] text-[#262626] hover:bg-[#dedbc5]"
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Globe className="w-4 h-4 text-[#e8c078]" />
+                  <span>এসইও ও ব্র্যান্ডিং</span>
+                </div>
+                <span className="text-[9px] uppercase font-mono-meta bg-indigo-600/20 text-indigo-900 px-1.5 py-0.2 rounded font-bold">
+                  SEO
+                </span>
+              </button>
+            </nav>
+
+            {/* Quick Metrics */}
+            <div className="pt-3 border-t border-black/15 space-y-1.5 text-[11px] font-mono-meta text-[#53514a]">
+              <div className="flex justify-between items-center">
+                <span>সংরক্ষিত গ্রন্থ:</span>
+                <span className="font-bold text-[#171717]">{totalBooks} টি</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>শ্রুতিপাঠ:</span>
+                <span className="font-bold text-[#8a493b]">{audiobooks.length} টি</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>কমিউনিটি পোস্ট:</span>
+                <span className="font-bold text-[#171717]">{communityPosts.length} টি</span>
+              </div>
+              <div className="flex justify-between items-center pt-1 border-t border-black/10">
+                <span>স্টোরেজ ক্লাউড:</span>
+                <span className="font-bold text-emerald-800">Cloudflare R2</span>
+              </div>
+            </div>
+
+            {/* Live Website Preview Link */}
+            <div className="pt-2">
+              <Link
+                href="/"
+                target="_blank"
+                className="w-full text-center py-2 px-3 border border-black/30 hover:border-black text-[11px] font-serif-bengali font-semibold text-[#171717] bg-[#e8e6d3] hover:bg-[#dedbc5] transition-colors flex items-center justify-center gap-1.5"
+              >
+                <ExternalLink className="w-3.5 h-3.5 text-[#8a493b]" />
+                <span>লাইভ ওয়েবসাইট দেখুন</span>
+              </Link>
             </div>
           </div>
+        </aside>
 
-          <div className="bg-[#f4f2e4] border-2 border-[#171717] p-4 space-y-1">
-            <span className="text-[11px] font-mono-meta text-[#7a776e] uppercase">মোট শ্রুতিপাঠ (Audio)</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-mono-meta font-bold text-[#8a493b]">{audiobooks.length}</span>
-              <Headphones className="w-5 h-5 text-[#8a493b]" />
+        {/* Right Main Content Workspace */}
+        <main className="flex-1 min-w-0 space-y-6">
+          {/* Success Alert */}
+          {successMsg && (
+            <div className="p-3 bg-emerald-100 border border-emerald-400 text-emerald-800 text-xs font-serif-bengali flex items-center justify-between">
+              <span>{successMsg}</span>
+              <button onClick={() => setSuccessMsg("")} className="text-emerald-800 hover:text-black">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-          </div>
+          )}
 
-          <div className="bg-[#f4f2e4] border-2 border-[#171717] p-4 space-y-1">
-            <span className="text-[11px] font-mono-meta text-[#7a776e] uppercase">অডিও স্টোরেজ মাধ্যম</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-lg font-mono-meta font-bold text-[#171717]">Cloudflare R2</span>
-              <Database className="w-5 h-5 text-[#171717]" />
+          {/* Form Error Alert */}
+          {formError && (
+            <div className="p-3 bg-red-100 border border-red-300 text-red-800 text-xs font-serif-bengali flex items-center justify-between">
+              <span>{formError}</span>
+              <button onClick={() => setFormError("")} className="text-red-800 hover:text-black">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <p className="text-[9px] font-mono-meta text-emerald-800">১০ জিবি ফ্রি • $০ ব্যান্ডউইথ</p>
-          </div>
-
-          <div className="bg-[#f4f2e4] border-2 border-[#171717] p-4 space-y-1">
-            <span className="text-[11px] font-mono-meta text-[#7a776e] uppercase">কপিরাইট মর্যাদা</span>
-            <div className="flex items-baseline justify-between">
-              <span className="text-xl font-mono-meta font-bold text-emerald-800">পাবলিক ডোমেইন</span>
-              <Feather className="w-5 h-5 text-emerald-800" />
-            </div>
-            <p className="text-[9px] font-mono-meta text-[#7a776e]">ও অনুমোদিত মুক্ত স্বত্ব</p>
-          </div>
-        </div>
-
-        {/* Section Tabs Switcher (Wrapped cleanly on mobile, 0 cropping!) */}
-        <div className="flex flex-wrap items-center gap-2 border-b-2 border-[#171717] pb-2">
-          <button
-            onClick={() => setAdminTab("books")}
-            className={`px-4 py-2 text-xs sm:text-sm font-serif-bengali font-bold flex items-center gap-1.5 transition-colors ${
-              adminTab === "books"
-                ? "bg-[#171717] text-[#eeeddb]"
-                : "bg-[#e8e6d3] text-[#53514a] hover:text-[#171717]"
-            }`}
-          >
-            <BookOpen className="w-4 h-4" />
-            <span>মুদ্রিত গ্রন্থ মহাফেজখানা ({totalBooks})</span>
-          </button>
-          <button
-            onClick={() => setAdminTab("audiobooks")}
-            className={`px-4 py-2 text-xs sm:text-sm font-serif-bengali font-bold flex items-center gap-1.5 transition-colors ${
-              adminTab === "audiobooks"
-                ? "bg-[#171717] text-[#eeeddb]"
-                : "bg-[#e8e6d3] text-[#53514a] hover:text-[#171717]"
-            }`}
-          >
-            <Headphones className="w-4 h-4" />
-            <span>শ্রুতিপাঠ ও অডিওবুক ({audiobooks.length})</span>
-          </button>
-          <button
-            onClick={() => setAdminTab("community")}
-            className={`px-4 py-2 text-xs sm:text-sm font-serif-bengali font-bold flex items-center gap-1.5 transition-colors ${
-              adminTab === "community"
-                ? "bg-[#171717] text-[#eeeddb]"
-                : "bg-[#e8e6d3] text-[#53514a] hover:text-[#171717]"
-            }`}
-          >
-            <Feather className="w-4 h-4 text-[#e8c078]" />
-            <span>আমার পুঁথি নিয়ন্ত্রণ ({communityPosts.length})</span>
-          </button>
-        </div>
+          )}
 
         {/* Books Management View */}
         {adminTab === "books" && (
@@ -910,7 +1056,30 @@ export default function AdminDashboardPage() {
             </div>
           </div>
         )}
+
+        {/* Website CMS View */}
+        {adminTab === "cms" && (
+          <CmsContentEditor
+            content={cmsContent}
+            onChange={setCmsContent}
+            onSave={handleSaveCmsSettings}
+            onResetDefaults={handleResetCmsDefaults}
+            isSaving={isSavingCms}
+          />
+        )}
+
+        {/* SEO & Branding View */}
+        {adminTab === "seo" && (
+          <SeoSettingsEditor
+            content={cmsContent}
+            onChange={setCmsContent}
+            onSave={handleSaveCmsSettings}
+            onResetDefaults={handleResetCmsDefaults}
+            isSaving={isSavingCms}
+          />
+        )}
       </main>
+    </div>
 
       {/* Book Add/Edit Modal */}
       {showModal && (

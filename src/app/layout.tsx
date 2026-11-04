@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { SiteContentProvider } from "@/context/SiteContentContext";
 
 export const metadata: Metadata = {
   title: "Puthipix (পুঁথিপিক্স) — ডিজিটাল লাইব্রেরি ও বুক রিডিং প্ল্যাটফর্ম",
@@ -24,7 +25,7 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-[#eeeddb] text-[#171717] selection:bg-[#8a493b] selection:text-[#eeeddb]">
-        {children}
+        <SiteContentProvider>{children}</SiteContentProvider>
       </body>
     </html>
   );
