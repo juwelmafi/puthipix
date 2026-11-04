@@ -14,7 +14,7 @@ export async function GET(request: Request) {
     const limit = parseInt(searchParams.get("limit") || "50", 10);
     const skip = parseInt(searchParams.get("skip") || "0", 10);
 
-    const session = await getSession();
+    const session = await getSession(request);
     const currentUserId = session?.userId ? session.userId.toString() : null;
 
     let postsList: any[] = [...MOCK_COMMUNITY_POSTS];
@@ -75,7 +75,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return NextResponse.json(
         { error: "পোস্ট প্রকাশ করতে অনুগ্রহ করে প্রথমে অ্যাকাউন্টে লগইন করুন।" },

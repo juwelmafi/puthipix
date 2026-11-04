@@ -36,7 +36,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return NextResponse.json(
         { error: "মন্তব্য করতে অনুগ্রহ করে প্রথমে লগইন করুন।" },

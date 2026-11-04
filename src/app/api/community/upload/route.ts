@@ -6,7 +6,7 @@ const MAX_IMAGE_SIZE = 3 * 1024 * 1024; // 3 MB Limit
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     if (!session) {
       return NextResponse.json(
         { error: "ছবি আপলোড করতে অনুগ্রহ করে প্রথমে অ্যাকাউন্টে লগইন করুন।" },

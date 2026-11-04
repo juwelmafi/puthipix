@@ -13,6 +13,7 @@ export default function AmarPuthiPage() {
   const [posts, setPosts] = useState<any[]>(MOCK_COMMUNITY_POSTS);
   const [loading, setLoading] = useState(false);
   const [activeGenre, setActiveGenre] = useState("all");
+  const [isComposerOpen, setIsComposerOpen] = useState(false);
 
   const genres = [
     { id: "all", label: "সকল লেখা" },
@@ -72,7 +73,7 @@ export default function AmarPuthiPage() {
 
       <main className="flex-grow max-w-4xl mx-auto w-full px-3 sm:px-6 py-6 sm:py-10 space-y-6">
         {/* Hero Banner */}
-        <section className="text-center py-4 sm:py-6 border-b-2 border-[#171717] space-y-2">
+        <section className="text-center py-4 sm:py-6 border-b-2 border-[#171717] space-y-3">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-[#ede9d6] border border-black/15 text-xs text-[#8a493b] font-bold">
             <Feather className="w-3.5 h-3.5" />
             <span>উন্মুক্ত সাহিত্য চত্বর ও পাঠক সমাজ</span>
@@ -86,10 +87,26 @@ export default function AmarPuthiPage() {
             এখানে পাঠক নিজেই লেখক, পর্যালোচক ও ভাবুক। আপনার পঠিত বইয়ের গভীর অনুভূতি,
             স্বরচিত ছোটগল্প বা কবিতা শেয়ার করুন সহমর্মী পাঠকদের সাথে।
           </p>
+
+          <div className="pt-1 flex items-center justify-center">
+            <button
+              type="button"
+              onClick={() => setIsComposerOpen(true)}
+              className="inline-flex items-center gap-2 px-5 py-2 bg-[#8a493b] hover:bg-[#171717] text-[#eeeddb] text-xs font-bold transition-all shadow-xs"
+            >
+              <Feather className="w-3.5 h-3.5 text-[#e8c078]" />
+              <span>নতুন লেখা প্রকাশ করুন</span>
+            </button>
+          </div>
         </section>
 
-        {/* Post Composer Card */}
-        <PostComposer user={user} onPostCreated={handlePostCreated} />
+        {/* Post Composer Card (Triggers Popup Modal) */}
+        <PostComposer
+          user={user}
+          onPostCreated={handlePostCreated}
+          isExternalOpen={isComposerOpen}
+          onCloseExternal={() => setIsComposerOpen(false)}
+        />
 
         {/* Genre Filter Chips */}
         <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto pb-2 border-b border-[rgba(23,23,23,0.18)]">
