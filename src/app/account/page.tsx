@@ -6,12 +6,13 @@ import { Masthead } from "@/components/layout/Masthead";
 import { Footer } from "@/components/layout/Footer";
 import { MOCK_BOOKS } from "@/data/mockBooks";
 import { BookCard } from "@/components/books/BookCard";
-import { User as UserIcon, BookOpen, Clock, Bookmark, BarChart3, LogIn, UserPlus } from "lucide-react";
+import { User as UserIcon, BookOpen, Clock, Bookmark, BarChart3, LogIn, UserPlus, Feather, MessageSquare, Heart } from "lucide-react";
 
 export default function AccountPage() {
-  const [activeTab, setActiveTab] = useState<"library" | "continue" | "bookmarks" | "stats">("library");
-  const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [activeTab, setActiveTab] = useState<"library" | "continue" | "bookmarks" | "posts" | "stats">("library");
+  const [user, setUser] = useState<{ id?: string; userId?: string; name: string; email: string; role: string } | null>(null);
   const [bookmarks, setBookmarks] = useState<any[]>([]);
+  const [myPosts, setMyPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -20,6 +21,7 @@ export default function AccountPage() {
       .then((data) => {
         if (data?.authenticated && data.user) {
           setUser(data.user);
+          const uid = data.user.id || data.user.userId;
           // Fetch real bookmarks
           fetch("/api/bookmarks")
             .then((bRes) => (bRes.ok ? bRes.json() : null))
@@ -29,6 +31,18 @@ export default function AccountPage() {
               }
             })
             .catch(() => {});
+
+          // Fetch user's own community posts
+          if (uid) {
+            fetch(`/api/community/posts?authorId=${uid}`)
+              .then((pRes) => (pRes.ok ? pRes.json() : null))
+              .then((pData) => {
+                if (pData?.posts) {
+                  setMyPosts(pData.posts);
+                }
+              })
+              .catch(() => {});
+          }
         }
       })
       .catch(() => {})
@@ -161,6 +175,17 @@ export default function AccountPage() {
             <span>বুকমার্কস ({bookmarks.length > 0 ? bookmarks.length : 2})</span>
           </button>
           <button
+            onClick={() => setActiveTab("posts")}
+            className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-serif-bengali transition-all border-b-2 flex items-center gap-1 shrink-0 ${
+              activeTab === "posts"
+                ? "border-[#171717] text-[#171717] font-bold"
+                : "border-transparent text-[#53514a] hover:text-[#171717]"
+            }`}
+          >
+            <Feather className="w-3.5 h-3.5 text-[#8a493b]" />
+            <span>আমার পোস্টসমূহ ({myPosts.length})</span>
+          </button>
+          <button
             onClick={() => setActiveTab("stats")}
             className={`px-3 sm:px-4 py-2 text-xs sm:text-sm font-serif-bengali transition-all border-b-2 flex items-center gap-1 shrink-0 ${
               activeTab === "stats"
@@ -279,6 +304,76 @@ export default function AccountPage() {
                   </Link>
                 </div>
               </>
+            )}
+          </div>
+        )}
+
+        {/* Tab Content: My Community Posts */}
+        {activeTab === "posts" && (
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[rgba(23,23,23,0.15)]">
+              <div>
+                <h3 className="font-serif-bengali font-bold text-base sm:text-lg text-[#171717]">
+                  'আমার পুঁথি'-তে আপনার প্রকাশিত লেখা ও পর্যালোচনা
+                </h3>
+                <p className="text-xs text-[#53514a]">
+                  আপনার সকল পোস্ট, লাইক ও সহপাঠীদের মন্তব্যের তালিকা।
+                </p>
+              </div>
+              <Link
+                href="/amar-puthi"
+                className="self-start sm:self-auto px-3 py-1.5 bg-[#171717] text-[#eeeddb] text-xs font-bold font-serif-bengali hover:bg-[#8a493b] transition-colors"
+              >
+                + নতুন লেখা লিখুন
+              </Link>
+            </div>
+
+            {myPosts.length === 0 ? (
+              <div className="p-8 text-center bg-[#f4f2e4] border border-[rgba(23,23,23,0.15)] space-y-2">
+                <Feather className="w-6 h-6 mx-auto text-[#8a493b] opacity-50" />
+                <p className="text-xs text-[#53514a]">আপনি এখনও কোনো পোস্ট প্রকাশ করেননি।</p>
+                <Link
+                  href="/amar-puthi"
+                  className="inline-block text-xs text-[#8a493b] font-bold hover:underline"
+                >
+                  সাহিত্য চত্বরে প্রথম পোস্ট লিখুন →
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {myPosts.map((p) => (
+                  <div
+                    key={p._id}
+                    className="p-4 bg-[#f4f2e4] border border-[rgba(23,23,23,0.15)] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
+                  >
+                    <div className="space-y-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-[#171717] truncate font-serif-bengali">
+                          {p.postTitle}
+                        </span>
+                        <span className="text-[10px] px-2 py-0.5 bg-[#ede9d6] text-[#8a493b] rounded font-mono-meta">
+                          {p.genre}
+                        </span>
+                      </div>
+                      <p className="text-[#53514a] line-clamp-1 font-serif-bengali">
+                        {p.content}
+                      </p>
+                      <div className="flex items-center gap-3 text-[10px] font-mono-meta text-[#7a776e]">
+                        <span>❤️ {p.likesCount || 0} টি পছন্দ</span>
+                        <span>💬 {p.commentsCount || 0} টি মন্তব্য</span>
+                        <span>{new Date(p.createdAt).toLocaleDateString("bn-BD")}</span>
+                      </div>
+                    </div>
+
+                    <Link
+                      href={`/amar-puthi#post-${p._id}`}
+                      className="inline-flex items-center gap-1 text-xs text-[#8a493b] font-bold hover:underline shrink-0"
+                    >
+                      পোস্টে যান →
+                    </Link>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

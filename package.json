@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "seed": "node scripts/seed-database.mjs",
+    "seed:community": "node scripts/seed-community-posts.mjs",
     "test:cloud": "node scripts/test-cloud-services.mjs",
     "test:e2e": "node scripts/e2e-health-check.mjs"
   },

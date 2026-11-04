@@ -3,7 +3,8 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpen, Search, User, LogIn, LogOut, Shield } from "lucide-react";
+import { BookOpen, Search, User, LogIn, LogOut, Shield, Feather, Sparkles } from "lucide-react";
+import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 
 export function Masthead() {
   const pathname = usePathname();
@@ -60,6 +61,9 @@ export function Masthead() {
 
             {user ? (
               <div className="flex items-center gap-2 sm:gap-3 lowercase font-sans-bengali">
+                {/* Notification Dropdown Component */}
+                <NotificationDropdown />
+
                 {user.role === "admin" && (
                   <Link
                     href="/admin"
@@ -149,12 +153,16 @@ export function Masthead() {
 
           <div className="flex items-center shrink-0 pl-1">
             <Link
-              href="/library"
-              className="text-xs text-[#53514a] hover:text-[#171717] flex items-center gap-1 p-1.5 sm:px-2.5 sm:py-1 rounded border border-[rgba(23,23,23,0.15)] bg-[#e8e6d3]/60 transition-colors"
-              title="গ্রন্থ অনুসন্ধান"
+              href="/amar-puthi"
+              className={`text-xs font-serif-bengali font-bold flex items-center gap-1.5 px-3 py-1.5 transition-all shadow-xs ${
+                pathname === "/amar-puthi"
+                  ? "bg-[#8a493b] text-[#eeeddb] border border-[#8a493b]"
+                  : "bg-[#171717] text-[#eeeddb] hover:bg-[#8a493b] border border-[#171717]"
+              }`}
+              title="আমার পুঁথি — উন্মুক্ত পাঠক চত্বর ও সাহিত্য আড্ডা"
             >
-              <Search className="w-3.5 h-3.5 text-[#53514a]" />
-              <span className="hidden sm:inline text-xs">অনুসন্ধান...</span>
+              <Feather className="w-3.5 h-3.5 text-[#e8c078]" />
+              <span className="tracking-wide">আমার পুঁথি</span>
             </Link>
           </div>
         </div>

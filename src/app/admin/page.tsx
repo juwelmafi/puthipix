@@ -25,9 +25,13 @@ import {
 import { FileUploadZone } from "@/components/admin/FileUploadZone";
 
 export default function AdminDashboardPage() {
-  const [adminTab, setAdminTab] = useState<"books" | "audiobooks">("books");
+  const [adminTab, setAdminTab] = useState<"books" | "audiobooks" | "community">("books");
   const [books, setBooks] = useState<any[]>(MOCK_BOOKS);
   const [audiobooks, setAudiobooks] = useState<any[]>(MOCK_AUDIOBOOKS);
+  const [communityPosts, setCommunityPosts] = useState<any[]>([]);
+  const [deleteModalPost, setDeleteModalPost] = useState<any | null>(null);
+  const [deletionNote, setDeletionNote] = useState("");
+  const [isDeletingPost, setIsDeletingPost] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [showAudioModal, setShowAudioModal] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -101,10 +105,59 @@ export default function AdminDashboardPage() {
     }
   };
 
+  // Load community posts from API
+  const fetchCommunityPosts = async () => {
+    try {
+      const res = await fetch("/api/admin/community/posts");
+      if (res.ok) {
+        const data = await res.json();
+        setCommunityPosts(data.posts || []);
+      }
+    } catch (e) {
+      console.warn("Failed to fetch community posts");
+    }
+  };
+
   useEffect(() => {
     fetchBooks();
     fetchAudiobooks();
+    fetchCommunityPosts();
   }, []);
+
+  const handleDeletePostWithNote = async () => {
+    if (!deleteModalPost) return;
+    if (!deletionNote.trim()) {
+      setFormError("পোস্ট অপসারণের কারণ বা ব্যাখ্যা লেখা আবশ্যক।");
+      return;
+    }
+    setIsDeletingPost(true);
+    setFormError("");
+
+    try {
+      const res = await fetch("/api/admin/community/posts", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          postId: deleteModalPost._id,
+          note: deletionNote.trim(),
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "পোস্ট মুছতে ব্যর্থ হয়েছে");
+      }
+
+      setSuccessMsg("পোস্টটি সফলভাবে অপসারণ করা হয়েছে এবং লেখককে কারণসহ নোটিফিকেশন পাঠানো হয়েছে।");
+      setDeleteModalPost(null);
+      setDeletionNote("");
+      fetchCommunityPosts();
+    } catch (err: any) {
+      setFormError(err.message || "পোস্ট মুছতে সমস্যা হয়েছে");
+    } finally {
+      setIsDeletingPost(false);
+    }
+  };
 
   const handleCreateAudiobook = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -318,6 +371,17 @@ export default function AdminDashboardPage() {
             <Headphones className="w-4 h-4" />
             <span>শ্রুতিপাঠ ও অডিওবুক ({audiobooks.length})</span>
           </button>
+          <button
+            onClick={() => setAdminTab("community")}
+            className={`px-4 py-2 text-xs sm:text-sm font-serif-bengali font-bold flex items-center gap-1.5 transition-colors ${
+              adminTab === "community"
+                ? "bg-[#171717] text-[#eeeddb]"
+                : "bg-[#e8e6d3] text-[#53514a] hover:text-[#171717]"
+            }`}
+          >
+            <Feather className="w-4 h-4 text-[#e8c078]" />
+            <span>আমার পুঁথি নিয়ন্ত্রণ ({communityPosts.length})</span>
+          </button>
         </div>
 
         {/* Books Management View */}
@@ -510,6 +574,126 @@ export default function AdminDashboardPage() {
                       </td>
                     </tr>
                   ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* Community Posts Management View */}
+        {adminTab === "community" && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[rgba(23,23,23,0.18)]">
+              <div>
+                <h2 className="text-2xl font-bold text-[#171717]">আমার পুঁথি — কমিউনিটি মডারেশন</h2>
+                <p className="text-xs text-[#53514a]">
+                  পাঠকদের প্রকাশিত বই পর্যালোচনা ও স্বরচিত সাহিত্যকর্ম তদারকি করুন। আপত্তিকর পোস্ট কারণসহ অপসারণ করতে পারেন।
+                </p>
+              </div>
+
+              <Link
+                href="/amar-puthi"
+                target="_blank"
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#171717] text-[#eeeddb] text-xs font-serif-bengali font-bold hover:bg-[#8a493b] transition-colors"
+              >
+                <Feather className="w-4 h-4 text-[#e8c078]" />
+                <span>লাইভ সাহিত্য চত্বর দেখুন →</span>
+              </Link>
+            </div>
+
+            {/* Posts Table */}
+            <div className="bg-[#f4f2e4] border border-[rgba(23,23,23,0.18)] overflow-x-auto shadow-sm">
+              <table className="w-full text-left text-xs font-mono-meta border-collapse">
+                <thead className="bg-[#e8e6d3] border-b border-[rgba(23,23,23,0.15)] text-[#171717]">
+                  <tr>
+                    <th className="p-3">লেখক ও তারিখ</th>
+                    <th className="p-3">শিরোনাম ও বিষয়</th>
+                    <th className="p-3">ছবি</th>
+                    <th className="p-3">এনগেজমেন্ট</th>
+                    <th className="p-3">অবস্থা (Status)</th>
+                    <th className="p-3 text-right">পদক্ষেপ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[rgba(23,23,23,0.1)]">
+                  {communityPosts.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="p-8 text-center text-[#7a776e] font-serif-bengali">
+                        এখনও কোনো কমিউনিটি পোস্ট প্রকাশিত হয়নি।
+                      </td>
+                    </tr>
+                  ) : (
+                    communityPosts.map((p) => (
+                      <tr key={p._id} className="hover:bg-[#ebe8d5] transition-colors">
+                        <td className="p-3">
+                          <span className="font-serif-bengali font-bold text-sm text-[#171717] block">
+                            {p.authorName}
+                          </span>
+                          <span className="text-[#7a776e] text-[10px]">
+                            {new Date(p.createdAt).toLocaleDateString("bn-BD")}
+                          </span>
+                        </td>
+                        <td className="p-3 max-w-xs">
+                          <span className="font-serif-bengali font-semibold text-[#171717] block truncate">
+                            {p.postTitle}
+                          </span>
+                          <span className="inline-block text-[10px] text-[#8a493b] font-serif-bengali bg-[#ede9d6] px-1.5 py-0.2 rounded mt-0.5">
+                            {p.genre}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          {p.image ? (
+                            <img
+                              src={p.image}
+                              alt="Post"
+                              className="w-10 h-10 object-cover border border-black/20"
+                            />
+                          ) : (
+                            <span className="text-[10px] text-[#a29f95]">নেই</span>
+                          )}
+                        </td>
+                        <td className="p-3">
+                          <span>❤️ {p.likesCount || 0}</span>
+                          <span className="ml-2">💬 {p.commentsCount || 0}</span>
+                        </td>
+                        <td className="p-3">
+                          <span
+                            className={`inline-block px-2 py-0.5 text-[10px] rounded font-bold ${
+                              p.status === "active"
+                                ? "bg-emerald-100 text-emerald-800"
+                                : "bg-red-100 text-red-800"
+                            }`}
+                          >
+                            {p.status === "active" ? "সক্রিয়" : "অপসারিত"}
+                          </span>
+                          {p.adminDeletionNote && (
+                            <span className="block text-[9px] text-red-700 italic mt-0.5 max-w-xs truncate" title={p.adminDeletionNote}>
+                              নোট: {p.adminDeletionNote}
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-3 text-right space-x-2">
+                          <Link
+                            href={`/amar-puthi#post-${p._id}`}
+                            target="_blank"
+                            className="inline-flex items-center gap-1 text-xs text-[#8a493b] hover:underline font-serif-bengali"
+                          >
+                            দেখুন
+                          </Link>
+                          {p.status === "active" && (
+                            <button
+                              onClick={() => {
+                                setDeleteModalPost(p);
+                                setDeletionNote("");
+                              }}
+                              className="inline-flex items-center gap-1 text-xs text-red-700 hover:text-red-900 font-serif-bengali font-bold underline"
+                            >
+                              অপসারণ
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -891,6 +1075,70 @@ export default function AdminDashboardPage() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Post Modal With Note */}
+      {deleteModalPost && (
+        <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+          <div className="max-w-md w-full bg-[#eeeddb] border-2 border-[#171717] p-6 shadow-2xl font-serif-bengali space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-black/15">
+              <h3 className="text-base font-bold text-red-800 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 text-red-700" />
+                <span>পোস্ট অপসারণ নিশ্চিতকরণ</span>
+              </h3>
+              <button
+                onClick={() => setDeleteModalPost(null)}
+                className="text-[#53514a] hover:text-[#171717]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="text-xs text-[#262626] space-y-1 bg-[#ede9d6] p-3 border border-black/10">
+              <p>
+                <strong className="text-[#171717]">শিরোনাম:</strong> {deleteModalPost.postTitle}
+              </p>
+              <p>
+                <strong className="text-[#171717]">লেখক:</strong> {deleteModalPost.authorName}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-[#171717] mb-1">
+                অপসারণের কারণ / মডারেশন নোট * (বাধ্যতামূলক)
+              </label>
+              <textarea
+                required
+                rows={3}
+                value={deletionNote}
+                onChange={(e) => setDeletionNote(e.target.value)}
+                placeholder="যেমন: অনাকাঙ্ক্ষিত বিজ্ঞাপন, কপিরাইট লঙ্ঘন, অনুপযুক্ত ভাষা ইত্যাদি..."
+                className="w-full bg-[#f4f2e4] border border-black/30 p-2 text-xs text-[#171717] focus:outline-none focus:border-black font-serif-bengali"
+              />
+              <p className="text-[10px] text-[#7a776e] mt-1 font-mono-meta">
+                * এই নোটটি পোস্টদাতার নোটিফিকেশন বক্সে সরাসরি প্রেরিত হবে।
+              </p>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 text-xs">
+              <button
+                type="button"
+                onClick={() => setDeleteModalPost(null)}
+                className="px-4 py-2 border border-black/30 hover:bg-black/5"
+              >
+                বাতিল
+              </button>
+              <button
+                type="button"
+                disabled={isDeletingPost || !deletionNote.trim()}
+                onClick={handleDeletePostWithNote}
+                className="px-4 py-2 bg-red-700 text-white font-bold hover:bg-red-800 transition-colors disabled:opacity-50"
+              >
+                {isDeletingPost ? "অপসারিত হচ্ছে..." : "নোটসহ অপসারণ করুন"}
+              </button>
+            </div>
           </div>
         </div>
       )}
