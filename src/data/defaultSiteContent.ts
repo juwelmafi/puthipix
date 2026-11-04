@@ -141,7 +141,7 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     brandTagline: "PUTHIPIX • OPEN LITERARY ARCHIVE & READING ROOM",
     mastheadQuote: "“জ্ঞান ও সাহিত্যের উন্মুক্ত বিস্তার, যেখানে পাঠক সরাসরি পর্দায় নিমগ্ন হয়ে পাঠ করতে পারেন।”",
     announcementEnabled: false,
-    announcementText: "স্বাগতম! পুঁথিপিক্সে যুক্ত হয়েছে ‘আমার পুঁথি’ সাহিত্য আড্ডা ও নতুন ধ্রুপদী শ্রুতিপাঠ।",
+    announcementText: "",
     announcementLink: "/amar-puthi",
   },
 
@@ -157,31 +157,31 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
       {
         number: "০১ • শতভাগ উন্মুক্ত",
         title: "সকল বই বিনামূল্যে সবার জন্য পাঠযোগ্য",
-        description: "কোনো সাবস্ক্রিপশন ফি বা লুকানো খরচ নেই",
+        description: "সকল বই বিনামূল্যে সবার জন্য পাঠযোগ্য",
       },
       {
         number: "০২ • পাবলিক ডোমেইন",
         title: "কপিরাইট মুক্ত ধ্রুপদী সাহিত্যের সংগ্রহ",
-        description: "আইনসম্মত ও উন্মুক্ত সাহিত্য সংরক্ষণ",
+        description: "কপিরাইট মুক্ত ধ্রুপদী সাহিত্যের সংগ্রহ",
       },
       {
-        number: "০৩ • নো ডাউনলোড পলিসি",
-        title: "পিসিতে বা মোবাইলে সরাসরি নিবিষ্ট পাঠ",
-        description: "ফাইল জমিয়ে না রেখে নিভৃতে বই পড়া",
+        number: "০৩ • আধুনিক রিডার",
+        title: "ফন্ট স্কেলিং ও পৃষ্ঠা চিহ্নিতকরণ সুবিধা",
+        description: "ফন্ট স্কেলিং ও পৃষ্ঠা চিহ্নিতকরণ সুবিধা",
       },
       {
-        number: "০৪ • শান্ত ও বিজ্ঞাপনহীন",
-        title: "স্ক্রিনের কোলাহলমুক্ত নিভৃত পাঠের অভিজ্ঞতা",
-        description: "সম্পূর্ণ বিশুদ্ধ টাইপোগ্রাফি ও লেআউট",
+        number: "০৪ • ধ্রুপদী শ্রুতিপাঠ",
+        title: "পেশাদার কণ্ঠে রেকর্ডেড অডিওবুক",
+        description: "পেশাদার কণ্ঠে রেকর্ডেড অডিওবুক",
       },
     ],
   },
 
   sections: {
     featuredBooks: {
-      eyebrow: "FEATURED CLASSICS",
-      heading: "নির্বাচিত ধ্রুপদী সংকলন",
-      linkText: "সকল গ্রন্থ",
+      eyebrow: "CURATED CLASSICS",
+      heading: "কালজয়ী সাহিত্য সম্ভার",
+      linkText: "সবগুলো দেখুন →",
     },
     genres: {
       eyebrow: "LITERARY CLASSIFICATION",
@@ -227,4 +227,3 @@ export const DEFAULT_SITE_CONTENT: SiteContent = {
     noDownloadText: "একটি সাধারণ প্রশ্ন হতে পারে: পুঁথিপিক্সে বই বা অডিওর কোনো ডাউনলোড বাটন রাখা হয়নি কেন? এর কারণ হলো—আমরা চাই পাঠক স্ক্রিনে ফাইল জমিয়ে ভুলে না গিয়ে সরাসরি একটি শান্ত পাঠাগারে পড়ার এবং শোনার অনুভূতি পান।",
   },
 };
-

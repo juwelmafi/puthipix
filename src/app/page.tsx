@@ -65,7 +65,13 @@ export default function HomePage() {
               {(hero.pillars || []).map((p, idx) => (
                 <div
                   key={idx}
-                  className={`p-2 sm:p-3 ${idx < 3 ? "border-r border-[rgba(23,23,23,0.1)]" : ""}`}
+                  className={`p-2 sm:p-3 ${
+                    idx === 0 || idx === 2
+                      ? "border-r border-[rgba(23,23,23,0.1)]"
+                      : idx === 1
+                      ? "md:border-r border-[rgba(23,23,23,0.1)]"
+                      : ""
+                  }`}
                 >
                   <span className="block font-mono-meta text-[9px] sm:text-[11px] text-[#7a776e] uppercase">
                     {p.number}
