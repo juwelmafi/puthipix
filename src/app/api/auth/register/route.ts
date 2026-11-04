@@ -55,9 +55,14 @@ export async function POST(request: Request) {
       role: newUser.role,
     });
 
+    const isHttps =
+      request.url.startsWith("https://") ||
+      request.headers.get("x-forwarded-proto") === "https";
+
     const response = NextResponse.json(
       {
         success: true,
+        token,
         user: {
           id: newUser._id.toString(),
           name: newUser.name,
@@ -71,7 +76,7 @@ export async function POST(request: Request) {
     // Set secure HTTP-only cookie
     response.cookies.set(TOKEN_COOKIE_NAME, token, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: isHttps,
       sameSite: "lax",
       maxAge: 30 * 24 * 60 * 60, // 30 days
       path: "/",

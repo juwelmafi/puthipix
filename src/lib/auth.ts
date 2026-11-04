@@ -39,11 +39,26 @@ export function verifyToken(token: string): SessionPayload | null {
   }
 }
 
-// Get Current Logged-in User Session from Cookies (Server-side)
-export async function getSession(): Promise<SessionPayload | null> {
+// Get Current Logged-in User Session from Cookies or Authorization Header (Server-side)
+export async function getSession(request?: Request): Promise<SessionPayload | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get(TOKEN_COOKIE_NAME)?.value;
+    let token: string | undefined;
+
+    // 1. Try reading HTTP cookie
+    try {
+      const cookieStore = await cookies();
+      token = cookieStore.get(TOKEN_COOKIE_NAME)?.value;
+    } catch {
+      // In case cookies() is invoked outside standard request context
+    }
+
+    // 2. Fallback: check Authorization Bearer header
+    if (!token && request) {
+      const authHeader = request.headers.get("authorization");
+      if (authHeader && authHeader.startsWith("Bearer ")) {
+        token = authHeader.substring(7).trim();
+      }
+    }
 
     if (!token) return null;
 
@@ -54,4 +69,3 @@ export async function getSession(): Promise<SessionPayload | null> {
 }
 
 export { TOKEN_COOKIE_NAME };
-

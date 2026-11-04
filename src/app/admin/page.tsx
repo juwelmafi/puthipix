@@ -55,6 +55,90 @@ export default function AdminDashboardPage() {
   const [formError, setFormError] = useState("");
   const [successMsg, setSuccessMsg] = useState("");
 
+  // Admin Auth & Session State
+  const [currentUser, setCurrentUser] = useState<{ id?: string; name: string; email: string; role: string } | null>(null);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("admin@puthipix.com");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [loginError, setLoginError] = useState("");
+
+  const getAuthHeaders = () => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("puthipix_session_token") : null;
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+    return headers;
+  };
+
+  const checkAuth = async () => {
+    try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("puthipix_session_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
+      const res = await fetch("/api/auth/me", { headers });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.authenticated && data.user) {
+          setCurrentUser(data.user);
+          return data.user;
+        }
+      }
+      setCurrentUser(null);
+      return null;
+    } catch {
+      setCurrentUser(null);
+      return null;
+    }
+  };
+
+  const handleAdminLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginError("");
+
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: loginEmail, password: loginPassword }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "লগইন ব্যর্থ হয়েছে");
+      }
+
+      if (data.user?.role !== "admin") {
+        throw new Error("এই অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই। admin@puthipix.com দিয়ে লগইন করুন।");
+      }
+
+      if (data.token) {
+        localStorage.setItem("puthipix_session_token", data.token);
+      }
+
+      setCurrentUser(data.user);
+      setShowLoginModal(false);
+      setFormError("");
+      setSuccessMsg("✅ অ্যাডমিন হিসেবে সফলভাবে লগইন হয়েছেন!");
+      fetchCmsContent();
+    } catch (err: any) {
+      setLoginError(err.message || "লগইন করতে সমস্যা হয়েছে");
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch("/api/auth/logout", { method: "POST" });
+    } catch {}
+    localStorage.removeItem("puthipix_session_token");
+    setCurrentUser(null);
+    setShowLoginModal(true);
+  };
+
   // New Book Form State
   const [formData, setFormData] = useState({
     title: "",
@@ -138,7 +222,9 @@ export default function AdminDashboardPage() {
   // Load site CMS & SEO content
   const fetchCmsContent = async () => {
     try {
-      const res = await fetch("/api/admin/site-settings");
+      const res = await fetch("/api/admin/site-settings", {
+        headers: getAuthHeaders(),
+      });
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.content) {
@@ -157,11 +243,14 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch("/api/admin/site-settings", {
         method: "PATCH",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({ content: cmsContent }),
       });
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) {
+          setShowLoginModal(true);
+        }
         throw new Error(data.error || "সংরক্ষণ করতে সমস্যা হয়েছে");
       }
       setSuccessMsg("সাইটের সম্পূর্ণ কনটেন্ট ও এসইও সেটিংস সফলভাবে সংরক্ষিত হয়েছে!");
@@ -180,6 +269,7 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
+    checkAuth();
     fetchBooks();
     fetchAudiobooks();
     fetchCommunityPosts();
@@ -198,7 +288,7 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch("/api/admin/community/posts", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(),
         body: JSON.stringify({
           postId: deleteModalPost._id,
           note: deletionNote.trim(),
@@ -292,7 +382,7 @@ export default function AdminDashboardPage() {
         const bookId = editingBook._id || editingBook.id || editingBook.slug;
         const res = await fetch(`/api/admin/books/${bookId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             ...formData,
             price: 0,
@@ -302,6 +392,7 @@ export default function AdminDashboardPage() {
 
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) setShowLoginModal(true);
           throw new Error(data.error || "বইয়ের তথ্য আপডেট করতে সমস্যা হয়েছে");
         }
 
@@ -314,7 +405,7 @@ export default function AdminDashboardPage() {
       } else {
         const res = await fetch("/api/admin/books", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify({
             ...formData,
             price: 0,
@@ -324,6 +415,7 @@ export default function AdminDashboardPage() {
 
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) setShowLoginModal(true);
           throw new Error(data.error || "বইটি তৈরি করতে ব্যর্থ হয়েছে");
         }
 
@@ -349,10 +441,12 @@ export default function AdminDashboardPage() {
       const bookId = deletingBook._id || deletingBook.id || deletingBook.slug;
       const res = await fetch(`/api/admin/books/${bookId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) setShowLoginModal(true);
         throw new Error(data.error || "বই মুছতে সমস্যা হয়েছে");
       }
 
@@ -427,12 +521,13 @@ export default function AdminDashboardPage() {
         const audioId = editingAudiobook._id || editingAudiobook.id || editingAudiobook.slug;
         const res = await fetch(`/api/admin/audiobooks/${audioId}`, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify(audioFormData),
         });
 
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) setShowLoginModal(true);
           throw new Error(data.error || "শ্রুতিপাঠ আপডেট করতে সমস্যা হয়েছে");
         }
 
@@ -445,12 +540,13 @@ export default function AdminDashboardPage() {
       } else {
         const res = await fetch("/api/audiobooks", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify(audioFormData),
         });
 
         const data = await res.json();
         if (!res.ok) {
+          if (res.status === 401 || res.status === 403) setShowLoginModal(true);
           throw new Error(data.error || "শ্রুতিপাঠ যুক্ত করতে সমস্যা হয়েছে");
         }
 
@@ -476,10 +572,12 @@ export default function AdminDashboardPage() {
       const audioId = deletingAudiobook._id || deletingAudiobook.id || deletingAudiobook.slug;
       const res = await fetch(`/api/admin/audiobooks/${audioId}`, {
         method: "DELETE",
+        headers: getAuthHeaders(),
       });
 
       const data = await res.json();
       if (!res.ok) {
+        if (res.status === 401 || res.status === 403) setShowLoginModal(true);
         throw new Error(data.error || "শ্রুতিপাঠ মুছতে সমস্যা হয়েছে");
       }
 
@@ -523,11 +621,56 @@ export default function AdminDashboardPage() {
             <span>মূল পাঠাগারে ফিরুন</span>
           </Link>
           <span className="opacity-40">•</span>
-          <span className="bg-[#8a493b] px-2 py-0.5 rounded text-[10px] uppercase font-bold text-white">
-            ADMIN
-          </span>
+          {currentUser && currentUser.role === "admin" ? (
+            <div className="flex items-center gap-2">
+              <span className="bg-emerald-900 border border-emerald-500/40 text-emerald-100 px-2.5 py-0.5 rounded text-[10px] font-mono-meta uppercase tracking-wider flex items-center gap-1.5 font-bold">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                <span>{currentUser.name}</span>
+              </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="text-[10px] text-red-300 hover:text-white underline font-mono-meta uppercase"
+                title="লগআউট করুন"
+              >
+                লগআউট
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <span className="bg-amber-900/80 text-amber-200 border border-amber-500/30 px-2 py-0.5 rounded text-[10px] font-mono-meta uppercase">
+                লগইন করা নেই
+              </span>
+              <button
+                type="button"
+                onClick={() => setShowLoginModal(true)}
+                className="bg-[#8a493b] hover:bg-[#a05545] text-white px-2.5 py-1 rounded text-xs font-serif-bengali font-bold transition-colors shadow-xs"
+              >
+                অ্যাডমিন লগইন
+              </button>
+            </div>
+          )}
         </div>
       </header>
+
+      {/* Unauthenticated / Reader Warning Notice */}
+      {(!currentUser || currentUser.role !== "admin") && (
+        <div className="bg-amber-100 border-b-2 border-amber-500 px-4 sm:px-8 py-2.5 text-amber-950 text-xs font-serif-bengali flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
+            <span>
+              <strong>অ্যাডমিন প্রমাণীকরণ প্রয়োজন:</strong> আপনি বর্তমানে অ্যাডমিন হিসেবে লগইন করা নেই। সাইটের কনটেন্ট, বই বা সেটিংস সংরক্ষণ করতে অনুগ্রহ করে লগইন করুন।
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowLoginModal(true)}
+            className="px-3 py-1 bg-[#8a493b] text-white text-xs font-bold shrink-0 hover:bg-[#171717] transition-colors rounded-xs shadow-xs"
+          >
+            অ্যাডমিন লগইন করুন →
+          </button>
+        </div>
+      )}
 
       {/* Main Admin 2-Column Workspace with Left Sticky Sidebar */}
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6 flex-grow">
@@ -1650,6 +1793,90 @@ export default function AdminDashboardPage() {
                 {isDeletingAudiobook ? "মুছে ফেলা হচ্ছে..." : "হ্যাঁ, মুছে ফেলুন"}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Admin Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-[#f4f2e4] border-2 border-[#171717] max-w-md w-full p-6 space-y-4 shadow-2xl font-serif-bengali animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-black/15 pb-2">
+              <div className="flex items-center gap-2">
+                <Shield className="w-5 h-5 text-[#8a493b]" />
+                <h3 className="font-bold text-base text-[#171717]">অ্যাডমিন প্রমাণীকরণ</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowLoginModal(false)}
+                className="text-black/50 hover:text-black p-1"
+                title="বন্ধ করুন"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <p className="text-xs text-[#53514a] leading-relaxed">
+              মহাফেজখানা নিয়ন্ত্রণ প্যানেলে কনটেন্ট বা সেটিংস সংরক্ষণ করতে অনুমোদিত অ্যাডমিন হিসেবে লগইন সম্পন্ন করুন।
+            </p>
+
+            {loginError && (
+              <div className="p-2.5 bg-red-100 border border-red-300 text-red-900 text-xs flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 shrink-0 text-red-700" />
+                <span>{loginError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleAdminLogin} className="space-y-3">
+              <div>
+                <label className="block text-xs font-mono-meta text-[#53514a] uppercase mb-1">
+                  অ্যাডমিন ইমেইল
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  className="w-full bg-[#eeeddb] border border-black/20 p-2 text-xs font-mono-meta text-[#171717] focus:outline-none focus:border-black"
+                  placeholder="admin@puthipix.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-mono-meta text-[#53514a] uppercase mb-1">
+                  পাসওয়ার্ড
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  className="w-full bg-[#eeeddb] border border-black/20 p-2 text-xs font-mono-meta text-[#171717] focus:outline-none focus:border-black"
+                  placeholder="ডিফল্ট পাসওয়ার্ড: admin123"
+                  autoFocus
+                />
+                <p className="text-[10px] text-[#7a776e] mt-1 font-mono-meta">
+                  * সিস্টেমে সংরক্ষিত ডিফল্ট অ্যাডমিন পাসওয়ার্ড: <strong>admin123</strong>
+                </p>
+              </div>
+
+              <div className="pt-2 flex justify-end gap-2 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setShowLoginModal(false)}
+                  className="px-3 py-1.5 border border-black/30 hover:bg-black/5"
+                >
+                  বাতিল
+                </button>
+                <button
+                  type="submit"
+                  disabled={loginLoading}
+                  className="px-5 py-1.5 bg-[#8a493b] text-white font-bold hover:bg-[#171717] transition-colors disabled:opacity-50"
+                >
+                  {loginLoading ? "যাচাই হচ্ছে..." : "লগইন সম্পন্ন করুন"}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

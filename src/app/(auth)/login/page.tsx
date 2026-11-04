@@ -32,6 +32,10 @@ export default function LoginPage() {
         throw new Error(data.error || "লগইন করতে সমস্যা হয়েছে");
       }
 
+      if (data.token) {
+        localStorage.setItem("puthipix_session_token", data.token);
+      }
+
       // Check role
       if (data.user?.role === "admin") {
         router.push("/admin");
