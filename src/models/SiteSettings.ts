@@ -29,3 +29,4 @@ const SiteSettingsSchema = new Schema<ISiteSettings>(
 
 export default mongoose.models.SiteSettings ||
   mongoose.model<ISiteSettings>("SiteSettings", SiteSettingsSchema);
+
