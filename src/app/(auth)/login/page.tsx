@@ -36,12 +36,7 @@ export default function LoginPage() {
         localStorage.setItem("puthipix_session_token", data.token);
       }
 
-      // Check role
-      if (data.user?.role === "admin" || data.user?.role === "super_admin") {
-        router.push("/account");
-      } else {
-        router.push("/");
-      }
+      router.push("/account");
       router.refresh();
     } catch (err: any) {
       setError(err.message);
