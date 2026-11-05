@@ -21,6 +21,7 @@ import {
 
 interface CommentItem {
   _id: string;
+  user?: string;
   userName: string;
   content: string;
   createdAt: string;
@@ -204,12 +205,16 @@ export function PostCard({ post, currentUser, onPostUpdated }: PostCardProps) {
     >
       {/* Post Header: Author info, genre, timestamp */}
       <div className="flex items-start justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#171717] text-[#eeeddb] flex items-center justify-center font-bold text-sm shrink-0 border border-black/20">
+        <Link
+          href={`/profile/${post.author}`}
+          className="flex items-center gap-3 group cursor-pointer"
+          title={`${post.authorName}-এর পাঠক প্রোফাইল দেখুন`}
+        >
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-[#171717] text-[#eeeddb] flex items-center justify-center font-bold text-sm shrink-0 border border-black/20 group-hover:bg-[#8a493b] transition-colors">
             {post.authorName ? post.authorName.charAt(0) : "পা"}
           </div>
           <div>
-            <span className="font-bold text-[#171717] text-sm sm:text-base block leading-tight">
+            <span className="font-bold text-[#171717] text-sm sm:text-base block leading-tight group-hover:text-[#8a493b] group-hover:underline transition-colors">
               {post.authorName}
             </span>
             <div className="flex items-center gap-1.5 text-[10px] font-mono-meta text-[#7a776e]">
@@ -217,7 +222,7 @@ export function PostCard({ post, currentUser, onPostUpdated }: PostCardProps) {
               <span>{formatTime(post.createdAt)}</span>
             </div>
           </div>
-        </div>
+        </Link>
 
         {/* Genre Pill */}
         <span className="inline-block px-2.5 py-0.5 bg-[#ede9d6] border border-black/15 text-[11px] font-bold text-[#8a493b] rounded-full shrink-0">
@@ -417,10 +422,21 @@ export function PostCard({ post, currentUser, onPostUpdated }: PostCardProps) {
               {comments.map((c) => (
                 <div key={c._id} className="pt-2 text-xs font-serif-bengali space-y-1">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-[#171717] flex items-center gap-1">
-                      <User className="w-3 h-3 text-[#8a493b]" />
-                      <span>{c.userName}</span>
-                    </span>
+                    {c.user ? (
+                      <Link
+                        href={`/profile/${c.user}`}
+                        className="font-bold text-[#171717] hover:text-[#8a493b] hover:underline flex items-center gap-1 transition-colors"
+                        title="পাঠক প্রোফাইল দেখুন"
+                      >
+                        <User className="w-3 h-3 text-[#8a493b]" />
+                        <span>{c.userName}</span>
+                      </Link>
+                    ) : (
+                      <span className="font-bold text-[#171717] flex items-center gap-1">
+                        <User className="w-3 h-3 text-[#8a493b]" />
+                        <span>{c.userName}</span>
+                      </span>
+                    )}
                     <span className="text-[10px] font-mono-meta text-[#7a776e]">
                       {formatTime(c.createdAt)}
                     </span>

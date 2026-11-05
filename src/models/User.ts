@@ -6,6 +6,12 @@ export interface IUser extends Document {
   passwordHash: string;
   role: "user" | "admin" | "super_admin";
   status: "active" | "suspended";
+  bio?: string;
+  avatar?: string;
+  followers?: mongoose.Types.ObjectId[];
+  following?: mongoose.Types.ObjectId[];
+  followersCount?: number;
+  followingCount?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -39,6 +45,38 @@ const UserSchema = new Schema<IUser>(
       type: String,
       enum: ["active", "suspended"],
       default: "active",
+    },
+    bio: {
+      type: String,
+      default: "সাহিত্যপ্রেমী পাঠক ও পুথিপিক্স সংগ্রাহক।",
+      maxlength: [300, "Bio cannot exceed 300 characters"],
+      trim: true,
+    },
+    avatar: {
+      type: String,
+      default: "",
+    },
+    followers: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    following: [
+      {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
+    followersCount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    followingCount: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
   },
   {

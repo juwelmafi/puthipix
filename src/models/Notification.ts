@@ -5,9 +5,10 @@ export interface INotification extends Document {
   sender: mongoose.Types.ObjectId; // User who triggered notification
   senderName: string;
   senderAvatar?: string;
-  type: "like" | "comment" | "admin_deletion" | "admin_approval" | "admin_rejection";
+  type: "like" | "comment" | "admin_deletion" | "admin_approval" | "admin_rejection" | "follow" | "message";
   postId?: mongoose.Types.ObjectId;
   postTitle?: string;
+  conversationId?: mongoose.Types.ObjectId;
   message: string;
   note?: string; // Reason when deleted by admin
   isRead: boolean;
@@ -39,7 +40,7 @@ const NotificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ["like", "comment", "admin_deletion", "admin_approval", "admin_rejection"],
+      enum: ["like", "comment", "admin_deletion", "admin_approval", "admin_rejection", "follow", "message"],
       required: true,
       index: true,
     },
@@ -50,6 +51,10 @@ const NotificationSchema = new Schema<INotification>(
     postTitle: {
       type: String,
       default: "",
+    },
+    conversationId: {
+      type: Schema.Types.ObjectId,
+      ref: "Conversation",
     },
     message: {
       type: String,

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BookOpen, Search, User, LogIn, LogOut, Shield, Feather, Sparkles } from "lucide-react";
+import { BookOpen, Search, User, LogIn, LogOut, Shield, Feather, Sparkles, MessageSquare } from "lucide-react";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { useSiteContent } from "@/context/SiteContentContext";
 
@@ -11,6 +11,7 @@ export function Masthead() {
   const pathname = usePathname();
   const router = useRouter();
   const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
+  const [unreadMessages, setUnreadMessages] = useState<number>(0);
   const { content } = useSiteContent();
   const { header } = content;
 
@@ -23,12 +24,38 @@ export function Masthead() {
       .then((data) => {
         if (data?.authenticated && data.user) {
           setUser(data.user);
+          // Fetch unread messages
+          fetch("/api/messages/unread-count")
+            .then((res) => (res.ok ? res.json() : null))
+            .then((mData) => {
+              if (mData?.unreadCount !== undefined) {
+                setUnreadMessages(mData.unreadCount);
+              }
+            })
+            .catch(() => {});
         } else {
           setUser(null);
+          setUnreadMessages(0);
         }
       })
       .catch(() => setUser(null));
   }, [pathname]);
+
+  // Periodic poll for unread messages when user is logged in
+  useEffect(() => {
+    if (!user) return;
+    const interval = setInterval(() => {
+      fetch("/api/messages/unread-count")
+        .then((res) => (res.ok ? res.json() : null))
+        .then((mData) => {
+          if (mData?.unreadCount !== undefined) {
+            setUnreadMessages(mData.unreadCount);
+          }
+        })
+        .catch(() => {});
+    }, 25000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -81,6 +108,21 @@ export function Masthead() {
               <div className="flex items-center gap-2 sm:gap-3 lowercase font-sans-bengali">
                 {/* Notification Dropdown Component */}
                 <NotificationDropdown />
+
+                {/* Direct Messages Link */}
+                <Link
+                  href="/messages"
+                  className="relative p-2 text-[#53514a] hover:text-[#171717] hover:bg-black/5 rounded-full transition-colors flex items-center justify-center"
+                  title="বার্তা ও চ্যাট (Direct Messages)"
+                  aria-label="বার্তা ও চ্যাট"
+                >
+                  <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-[#171717]" />
+                  {unreadMessages > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#8a493b] text-white text-[10px] font-mono-meta font-bold rounded-full flex items-center justify-center border-2 border-[#eeeddb] shadow-xs animate-pulse">
+                      {unreadMessages > 9 ? "9+" : unreadMessages}
+                    </span>
+                  )}
+                </Link>
 
                 {(user.role === "admin" || user.role === "super_admin") && (
                   <Link

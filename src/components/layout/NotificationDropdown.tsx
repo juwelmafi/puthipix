@@ -2,14 +2,16 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { Bell, Heart, MessageSquare, AlertTriangle, Check, X, BookOpen } from "lucide-react";
+import { Bell, Heart, MessageSquare, AlertTriangle, Check, X, BookOpen, UserPlus, Mail } from "lucide-react";
 
 interface NotificationItem {
   _id: string;
-  type: "like" | "comment" | "admin_deletion";
+  type: "like" | "comment" | "admin_deletion" | "admin_approval" | "admin_rejection" | "follow" | "message";
+  sender?: string;
   senderName: string;
   postTitle?: string;
   postId?: string;
+  conversationId?: string;
   message: string;
   note?: string;
   isRead: boolean;
@@ -162,7 +164,13 @@ export function NotificationDropdown() {
                   key={n._id}
                   onClick={() => {
                     if (!n.isRead) markAsRead(n._id);
-                    if (n.postId && n.type !== "admin_deletion") {
+                    if (n.type === "follow" && n.sender) {
+                      window.location.href = `/profile/${n.sender}`;
+                    } else if (n.type === "message") {
+                      window.location.href = n.sender
+                        ? `/messages?user=${n.sender}`
+                        : "/messages";
+                    } else if (n.postId && n.type !== "admin_deletion") {
                       window.location.href = `/amar-puthi#post-${n.postId}`;
                     }
                   }}
@@ -182,9 +190,24 @@ export function NotificationDropdown() {
                         <MessageSquare className="w-3.5 h-3.5" />
                       </div>
                     )}
-                    {n.type === "admin_deletion" && (
+                    {n.type === "follow" && (
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center">
+                        <UserPlus className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    {n.type === "message" && (
+                      <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                        <Mail className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    {(n.type === "admin_deletion" || n.type === "admin_rejection") && (
                       <div className="w-7 h-7 rounded-full bg-amber-100 text-amber-800 flex items-center justify-center">
                         <AlertTriangle className="w-3.5 h-3.5" />
+                      </div>
+                    )}
+                    {n.type === "admin_approval" && (
+                      <div className="w-7 h-7 rounded-full bg-emerald-100 text-emerald-800 flex items-center justify-center">
+                        <Check className="w-3.5 h-3.5" />
                       </div>
                     )}
                   </div>

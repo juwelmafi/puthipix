@@ -140,6 +140,24 @@ export default function AccountPage() {
                     <p className="text-[10px] sm:text-xs font-mono-meta text-[#7a776e] truncate">
                       {user ? `ইমেইল: ${user.email}` : "লগইন করা নেই • ডেমো প্রিভিউ"}
                     </p>
+                    {user && (user.id || user.userId) && (
+                      <div className="flex items-center gap-2 pt-1 font-serif-bengali">
+                        <Link
+                          href={`/profile/${user.id || user.userId}`}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#8a493b] hover:text-[#171717] hover:underline"
+                        >
+                          <span>সার্বজনীন প্রোফাইল দেখুন →</span>
+                        </Link>
+                        <span className="text-[#7a776e] text-[10px]">•</span>
+                        <Link
+                          href="/messages"
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#53514a] hover:text-[#171717] hover:underline"
+                        >
+                          <MessageSquare className="w-3 h-3 text-[#8a493b]" />
+                          <span>বার্তা ও আলাপ</span>
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
 
