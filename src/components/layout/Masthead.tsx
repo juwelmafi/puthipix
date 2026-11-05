@@ -6,12 +6,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { BookOpen, Search, User, LogIn, LogOut, Shield, Feather, Sparkles, MessageSquare } from "lucide-react";
 import { NotificationDropdown } from "@/components/layout/NotificationDropdown";
 import { useSiteContent } from "@/context/SiteContentContext";
+import { useChat } from "@/context/ChatContext";
 
 export function Masthead() {
   const pathname = usePathname();
   const router = useRouter();
-  const [user, setUser] = useState<{ name: string; email: string; role: string } | null>(null);
-  const [unreadMessages, setUnreadMessages] = useState<number>(0);
+  const [user, setUser] = useState<{ name: string; email: string; role: string; avatar?: string } | null>(null);
+  const { openChat, unreadCount: unreadMessages } = useChat();
   const { content } = useSiteContent();
   const { header } = content;
 
@@ -24,38 +25,12 @@ export function Masthead() {
       .then((data) => {
         if (data?.authenticated && data.user) {
           setUser(data.user);
-          // Fetch unread messages
-          fetch("/api/messages/unread-count")
-            .then((res) => (res.ok ? res.json() : null))
-            .then((mData) => {
-              if (mData?.unreadCount !== undefined) {
-                setUnreadMessages(mData.unreadCount);
-              }
-            })
-            .catch(() => {});
         } else {
           setUser(null);
-          setUnreadMessages(0);
         }
       })
       .catch(() => setUser(null));
   }, [pathname]);
-
-  // Periodic poll for unread messages when user is logged in
-  useEffect(() => {
-    if (!user) return;
-    const interval = setInterval(() => {
-      fetch("/api/messages/unread-count")
-        .then((res) => (res.ok ? res.json() : null))
-        .then((mData) => {
-          if (mData?.unreadCount !== undefined) {
-            setUnreadMessages(mData.unreadCount);
-          }
-        })
-        .catch(() => {});
-    }, 25000);
-    return () => clearInterval(interval);
-  }, [user]);
 
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -109,11 +84,12 @@ export function Masthead() {
                 {/* Notification Dropdown Component */}
                 <NotificationDropdown />
 
-                {/* Direct Messages Link */}
-                <Link
-                  href="/messages"
-                  className="relative p-2 text-[#53514a] hover:text-[#171717] hover:bg-black/5 rounded-full transition-colors flex items-center justify-center"
-                  title="বার্তা ও চ্যাট (Direct Messages)"
+                {/* Direct Messages Trigger */}
+                <button
+                  type="button"
+                  onClick={() => openChat()}
+                  className="relative p-2 text-[#53514a] hover:text-[#171717] hover:bg-black/5 rounded-full transition-colors flex items-center justify-center cursor-pointer"
+                  title="বার্তা ও চ্যাট (ডাকঘর)"
                   aria-label="বার্তা ও চ্যাট"
                 >
                   <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5 text-[#171717]" />
@@ -122,7 +98,7 @@ export function Masthead() {
                       {unreadMessages > 9 ? "9+" : unreadMessages}
                     </span>
                   )}
-                </Link>
+                </button>
 
                 {(user.role === "admin" || user.role === "super_admin") && (
                   <Link
@@ -135,10 +111,16 @@ export function Masthead() {
                 )}
                 <Link
                   href="/account"
-                  className="hover:text-[#171717] transition-colors flex items-center gap-1 text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-none font-medium"
+                  className="hover:text-[#171717] transition-colors flex items-center gap-1.5 text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-none font-medium"
                   title="আমার প্রোফাইল"
                 >
-                  <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#8a493b]" />
+                  {user.avatar ? (
+                    <div className="w-4 h-4 sm:w-5 sm:h-5 rounded-full overflow-hidden border border-[#8a493b] shrink-0">
+                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    </div>
+                  ) : (
+                    <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 text-[#8a493b]" />
+                  )}
                   <span className="truncate">{user.name}</span>
                 </Link>
                 <button

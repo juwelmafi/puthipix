@@ -129,11 +129,16 @@ export async function PUT(
       return NextResponse.json({ error: "ব্যবহারকারী পাওয়া যায়নি।" }, { status: 404 });
     }
 
-    // Also update authorName on posts if name was changed
+    // Also update authorName on posts & comments if name was changed
     if (updateFields.name) {
       await Post.updateMany(
         { author: id },
         { $set: { authorName: updateFields.name } }
+      );
+      const Comment = (await import("@/models/Comment")).default;
+      await Comment.updateMany(
+        { user: id },
+        { $set: { userName: updateFields.name } }
       );
     }
 

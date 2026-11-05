@@ -22,12 +22,18 @@ import {
   Sliders,
   UserCheck,
   ChevronRight,
+  Camera,
+  Edit3,
 } from "lucide-react";
 import { AccountSkeleton } from "@/components/ui/Skeletons";
+import { useChat } from "@/context/ChatContext";
+import { EditProfileModal } from "@/components/profile/EditProfileModal";
 
 export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<"library" | "continue" | "bookmarks" | "posts" | "stats">("library");
-  const [user, setUser] = useState<{ id?: string; userId?: string; name: string; email: string; role: string } | null>(null);
+  const [user, setUser] = useState<{ id?: string; userId?: string; name: string; email: string; role: string; avatar?: string; bio?: string } | null>(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const { openChat } = useChat();
   const [bookmarks, setBookmarks] = useState<any[]>([]);
   const [myPosts, setMyPosts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,11 +115,15 @@ export default function AccountPage() {
             <div className="p-4 sm:p-6 bg-[#e8e6d3] border-2 border-[#171717] mb-6 sm:mb-8 shadow-sm font-serif-bengali">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div className="flex items-center gap-3 sm:gap-4">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-[#171717] text-[#eeeddb] flex items-center justify-center font-serif-bengali text-xl sm:text-2xl font-bold shrink-0 border border-black/20">
-                    {user ? user.name.slice(0, 2) : "পা"}
+                  <div className="relative w-12 h-12 sm:w-16 sm:h-16 bg-[#171717] text-[#eeeddb] flex items-center justify-center font-serif-bengali text-xl sm:text-2xl font-bold shrink-0 border border-black/20 rounded-full overflow-hidden">
+                    {user?.avatar ? (
+                      <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                    ) : (
+                      user ? user.name.slice(0, 2) : "পা"
+                    )}
                   </div>
                   <div className="truncate">
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <h1 className="text-lg sm:text-2xl font-serif-bengali font-bold text-[#171717] truncate">
                         {user ? user.name : "পাঠক প্রোফাইল"}
                       </h1>
@@ -136,6 +146,17 @@ export default function AccountPage() {
                           ? "নিবন্ধিত পাঠক"
                           : "অতিথি পাঠক"}
                       </span>
+                      {user && (
+                        <button
+                          type="button"
+                          onClick={() => setIsEditModalOpen(true)}
+                          className="px-2 py-0.5 bg-[#8a493b] hover:bg-[#723a2e] text-white text-[10px] font-bold rounded-xs flex items-center gap-1 transition-colors cursor-pointer"
+                          title="নাম ও ছবি পরিবর্তন করুন"
+                        >
+                          <Edit3 className="w-2.5 h-2.5" />
+                          <span>সম্পাদনা</span>
+                        </button>
+                      )}
                     </div>
                     <p className="text-[10px] sm:text-xs font-mono-meta text-[#7a776e] truncate">
                       {user ? `ইমেইল: ${user.email}` : "লগইন করা নেই • ডেমো প্রিভিউ"}
@@ -149,13 +170,14 @@ export default function AccountPage() {
                           <span>সার্বজনীন প্রোফাইল দেখুন →</span>
                         </Link>
                         <span className="text-[#7a776e] text-[10px]">•</span>
-                        <Link
-                          href="/messages"
-                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#53514a] hover:text-[#171717] hover:underline"
+                        <button
+                          type="button"
+                          onClick={() => openChat()}
+                          className="inline-flex items-center gap-1 text-[11px] font-bold text-[#53514a] hover:text-[#171717] hover:underline cursor-pointer"
                         >
                           <MessageSquare className="w-3 h-3 text-[#8a493b]" />
                           <span>বার্তা ও আলাপ</span>
-                        </Link>
+                        </button>
                       </div>
                     )}
                   </div>
@@ -527,6 +549,23 @@ export default function AccountPage() {
               </>
             )}
           </>
+        )}
+
+        {/* Edit Profile Modal */}
+        {user && (user.id || user.userId) && (
+          <EditProfileModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            user={{
+              _id: (user.id || user.userId) as string,
+              name: user.name,
+              bio: user.bio,
+              avatar: user.avatar,
+            }}
+            onProfileUpdated={(updated) => {
+              setUser((prev) => (prev ? { ...prev, ...updated } : null));
+            }}
+          />
         )}
       </main>
 

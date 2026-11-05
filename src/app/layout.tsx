@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { SiteContentProvider } from "@/context/SiteContentContext";
+import { ChatProvider } from "@/context/ChatContext";
+import { ChatModal } from "@/components/chat/ChatModal";
 
 export const metadata: Metadata = {
   title: "Puthipix (পুঁথিপিক্স) — ডিজিটাল লাইব্রেরি ও বুক রিডিং প্ল্যাটফর্ম",
@@ -25,7 +27,12 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-screen flex flex-col bg-[#eeeddb] text-[#171717] selection:bg-[#8a493b] selection:text-[#eeeddb]">
-        <SiteContentProvider>{children}</SiteContentProvider>
+        <SiteContentProvider>
+          <ChatProvider>
+            {children}
+            <ChatModal />
+          </ChatProvider>
+        </SiteContentProvider>
       </body>
     </html>
   );

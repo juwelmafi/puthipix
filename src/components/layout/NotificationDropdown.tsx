@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Bell, Heart, MessageSquare, AlertTriangle, Check, X, BookOpen, UserPlus, Mail } from "lucide-react";
+import { useChat } from "@/context/ChatContext";
 
 interface NotificationItem {
   _id: string;
@@ -25,6 +26,7 @@ export function NotificationDropdown() {
   const [loading, setLoading] = useState(false);
   const [mounted, setMounted] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
+  const { openChatWithUser, openChat } = useChat();
 
   useEffect(() => {
     setMounted(true);
@@ -167,9 +169,12 @@ export function NotificationDropdown() {
                     if (n.type === "follow" && n.sender) {
                       window.location.href = `/profile/${n.sender}`;
                     } else if (n.type === "message") {
-                      window.location.href = n.sender
-                        ? `/messages?user=${n.sender}`
-                        : "/messages";
+                      setIsOpen(false);
+                      if (n.sender) {
+                        openChatWithUser({ _id: n.sender, name: n.senderName });
+                      } else {
+                        openChat();
+                      }
                     } else if (n.postId && n.type !== "admin_deletion") {
                       window.location.href = `/amar-puthi#post-${n.postId}`;
                     }

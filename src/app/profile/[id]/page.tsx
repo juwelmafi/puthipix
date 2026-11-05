@@ -21,7 +21,10 @@ import {
   ArrowLeft,
   Share2,
   Check,
+  Camera,
 } from "lucide-react";
+import { useChat } from "@/context/ChatContext";
+import { EditProfileModal } from "@/components/profile/EditProfileModal";
 
 interface UserProfileData {
   _id: string;
@@ -45,6 +48,7 @@ function UserProfileContent() {
   const params = useParams();
   const router = useRouter();
   const userId = params?.id as string;
+  const { openChatWithUser, openChat } = useChat();
 
   const [profile, setProfile] = useState<UserProfileData | null>(null);
   const [posts, setPosts] = useState<any[]>([]);
@@ -54,6 +58,7 @@ function UserProfileContent() {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"posts" | "about">("posts");
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   // Inline bio editing for profile owner
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -255,9 +260,26 @@ function UserProfileContent() {
               <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6 pt-3">
                 {/* Large Avatar */}
                 <div className="relative shrink-0">
-                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#171717] text-[#eeeddb] flex items-center justify-center font-bold text-3xl sm:text-4xl border-3 border-[#8a493b] shadow-md select-none">
-                    {profile.name ? profile.name.charAt(0) : "পা"}
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-[#171717] text-[#eeeddb] flex items-center justify-center font-bold text-3xl sm:text-4xl border-3 border-[#8a493b] shadow-md select-none overflow-hidden">
+                    {profile.avatar ? (
+                      <img
+                        src={profile.avatar}
+                        alt={profile.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      profile.name ? profile.name.charAt(0) : "পা"
+                    )}
                   </div>
+                  {profile.isMe && (
+                    <button
+                      onClick={() => setIsEditModalOpen(true)}
+                      className="absolute -bottom-1 -left-1 bg-[#171717] text-[#eeeddb] hover:bg-[#8a493b] p-1.5 rounded-full border-2 border-[#eeeddb] shadow-sm transition-colors cursor-pointer"
+                      title="ছবি ও প্রোফাইল পরিবর্তন করুন"
+                    >
+                      <Camera className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                   {profile.role === "super_admin" && (
                     <span
                       title="সুপার অ্যাডমিন"
@@ -376,19 +398,28 @@ function UserProfileContent() {
                   <div className="pt-2 flex flex-wrap items-center justify-center sm:justify-start gap-3">
                     {profile.isMe ? (
                       <>
-                        <Link
-                          href="/account"
-                          className="px-4 py-2 bg-[#171717] text-[#eeeddb] hover:bg-[#8a493b] font-serif-bengali font-bold text-xs flex items-center gap-1.5 transition-colors border border-black"
+                        <button
+                          type="button"
+                          onClick={() => setIsEditModalOpen(true)}
+                          className="px-4 py-2 bg-[#8a493b] text-[#eeeddb] hover:bg-[#723a2e] font-serif-bengali font-bold text-xs flex items-center gap-1.5 transition-colors border-2 border-[#171717] shadow-xs cursor-pointer"
                         >
-                          <UserIcon className="w-3.5 h-3.5" />
-                          <span>আমার পাঠক অ্যাকাউন্ট ও সেটিংস</span>
-                        </Link>
-                        <Link
-                          href="/messages"
-                          className="px-4 py-2 bg-[#ede9d6] text-[#171717] hover:bg-[#171717] hover:text-[#eeeddb] font-serif-bengali font-bold text-xs flex items-center gap-1.5 transition-colors border border-black/20"
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>প্রোফাইল সম্পাদনা (Edit Profile)</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openChat()}
+                          className="px-4 py-2 bg-[#ede9d6] text-[#171717] hover:bg-[#171717] hover:text-[#eeeddb] font-serif-bengali font-bold text-xs flex items-center gap-1.5 transition-colors border-2 border-black/20 cursor-pointer"
                         >
                           <MessageSquare className="w-3.5 h-3.5 text-[#8a493b]" />
-                          <span>আমার বার্তা ও পত্রালাপ</span>
+                          <span>আমার বার্তা ও ডাকঘর</span>
+                        </button>
+                        <Link
+                          href="/account"
+                          className="px-3 py-2 bg-[#f4f2e4] text-[#53514a] hover:text-[#171717] font-serif-bengali text-xs flex items-center gap-1 transition-colors border border-black/20"
+                        >
+                          <UserIcon className="w-3.5 h-3.5" />
+                          <span>অ্যাকাউন্ট সেটিংস</span>
                         </Link>
                       </>
                     ) : (
@@ -418,14 +449,22 @@ function UserProfileContent() {
                           )}
                         </button>
 
-                        {/* Send Message Button */}
-                        <Link
-                          href={`/messages?user=${profile._id}`}
-                          className="px-5 py-2 bg-[#ede9d6] text-[#171717] hover:bg-[#171717] hover:text-[#eeeddb] font-serif-bengali font-bold text-xs sm:text-sm flex items-center gap-2 border-2 border-[#171717] transition-colors"
+                        {/* Send Message Button (Opens Chat Modal directly) */}
+                        <button
+                          type="button"
+                          onClick={() =>
+                            openChatWithUser({
+                              _id: profile._id,
+                              name: profile.name,
+                              avatar: profile.avatar,
+                              role: profile.role,
+                            })
+                          }
+                          className="px-5 py-2 bg-[#ede9d6] text-[#171717] hover:bg-[#171717] hover:text-[#eeeddb] font-serif-bengali font-bold text-xs sm:text-sm flex items-center gap-2 border-2 border-[#171717] transition-colors cursor-pointer"
                         >
                           <MessageSquare className="w-4 h-4 text-[#8a493b]" />
                           <span>বার্তা পাঠান</span>
-                        </Link>
+                        </button>
                       </>
                     )}
                   </div>
@@ -546,6 +585,32 @@ function UserProfileContent() {
               </div>
             )}
           </div>
+        )}
+
+        {/* Edit Profile Modal */}
+        {profile && profile.isMe && (
+          <EditProfileModal
+            isOpen={isEditModalOpen}
+            onClose={() => setIsEditModalOpen(false)}
+            user={{
+              _id: profile._id,
+              name: profile.name,
+              bio: profile.bio,
+              avatar: profile.avatar,
+            }}
+            onProfileUpdated={(updated) => {
+              setProfile((prev) =>
+                prev
+                  ? {
+                      ...prev,
+                      name: updated.name,
+                      bio: updated.bio,
+                      avatar: updated.avatar,
+                    }
+                  : null
+              );
+            }}
+          />
         )}
       </main>
 
