@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdminSession } from "@/lib/auth";
 import { uploadToR2, isR2Configured, getR2FileUrl } from "@/lib/storage";
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
-    if (session && session.role !== "admin") {
+    const session = await getSession(request);
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json(
         { error: "অননুমোদিত: শুধুমাত্র অ্যাডমিন ফাইল আপলোড করতে পারবেন" },
         { status: 403 }

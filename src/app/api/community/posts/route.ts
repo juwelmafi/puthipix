@@ -102,25 +102,33 @@ export async function POST(request: Request) {
 
     let authorId: any = session.userId || (session as any).id;
     let authorName = session.name || "সাহিত্যপ্রেমী পাঠক";
+    let userAvatar = "";
 
     try {
       await connectToDatabase();
 
       // Ensure authorId is a valid ObjectId
       if (!authorId || !mongoose.Types.ObjectId.isValid(authorId)) {
-        const userDoc = await User.findOne({ email: session.email });
-        if (userDoc) {
-          authorId = userDoc._id;
-          authorName = userDoc.name;
-        } else {
+        try {
+          const userDoc = await User.findOne({ email: session.email });
+          if (userDoc) {
+            authorId = userDoc._id;
+            authorName = userDoc.name || authorName;
+            userAvatar = (userDoc as any).avatar || "";
+          } else {
+            authorId = new mongoose.Types.ObjectId();
+          }
+        } catch {
           authorId = new mongoose.Types.ObjectId();
         }
+      } else {
+        authorId = new mongoose.Types.ObjectId(authorId);
       }
 
       const newPost = await Post.create({
         author: authorId,
         authorName,
-        userAvatar: "",
+        userAvatar,
         bookTitle: bookTitle ? bookTitle.trim() : "",
         bookAuthor: bookAuthor ? bookAuthor.trim() : "",
         postTitle: postTitle.trim(),

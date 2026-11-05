@@ -6,7 +6,8 @@ import { Footer } from "@/components/layout/Footer";
 import { PostComposer } from "@/components/community/PostComposer";
 import { PostCard } from "@/components/community/PostCard";
 import { MOCK_COMMUNITY_POSTS } from "@/data/mockCommunityPosts";
-import { Feather, BookOpen, Sparkles, MessageSquare, Loader2 } from "lucide-react";
+import { PostSkeletonFeed } from "@/components/ui/Skeletons";
+import { Feather, BookOpen, Sparkles, MessageSquare } from "lucide-react";
 
 export default function AmarPuthiPage() {
   const [user, setUser] = useState<{ name: string; email: string; role: string; userId?: string } | null>(null);
@@ -130,10 +131,7 @@ export default function AmarPuthiPage() {
 
         {/* Posts Feed */}
         {loading ? (
-          <div className="py-16 text-center space-y-3">
-            <Loader2 className="w-7 h-7 animate-spin mx-auto text-[#8a493b]" />
-            <p className="text-xs text-[#53514a]">সাহিত্য চত্বর থেকে পোস্টসমূহ সাজানো হচ্ছে...</p>
-          </div>
+          <PostSkeletonFeed count={3} />
         ) : posts.length === 0 ? (
           <div className="bg-[#f4f2e4] border-2 border-[#171717] p-8 sm:p-12 text-center space-y-3">
             <BookOpen className="w-8 h-8 mx-auto text-[#8a493b] opacity-60" />

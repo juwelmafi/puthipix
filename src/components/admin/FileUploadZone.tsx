@@ -74,8 +74,14 @@ export function FileUploadZone({
         formData.append("type", type);
       }
 
+      const token = typeof window !== "undefined" ? localStorage.getItem("puthipix_session_token") : null;
+      const headers: Record<string, string> = {};
+      if (token) headers["Authorization"] = `Bearer ${token}`;
+
       const res = await fetch(endpoint, {
         method: "POST",
+        headers,
+        credentials: "include",
         body: formData,
       });
 

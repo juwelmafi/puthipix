@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdminSession } from "@/lib/auth";
 import { uploadImageToCloudinary, isCloudinaryConfigured } from "@/lib/cloudinary";
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
     // Allow admin, or authenticated users in development mode
-    if (session && session.role !== "admin") {
+    if (session && !isAdminSession(session)) {
       return NextResponse.json(
         { error: "অননুমোদিত: শুধুমাত্র অ্যাডমিন ছবি আপলোড করতে পারবেন।" },
         { status: 403 }

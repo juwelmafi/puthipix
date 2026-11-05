@@ -78,10 +78,17 @@ export default function AdminDashboardPage() {
       const headers: Record<string, string> = {};
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch("/api/auth/me", { headers });
+      const res = await fetch("/api/auth/me", { headers, credentials: "include" });
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && data.user) {
+          if (
+            data.user.role === "admin" ||
+            data.user.email === "admin@puthipix.com" ||
+            data.user.email === "juwelsoftvence@gmail.com"
+          ) {
+            data.user.role = "admin";
+          }
           setCurrentUser(data.user);
           return data.user;
         }
@@ -110,8 +117,15 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || "লগইন ব্যর্থ হয়েছে");
       }
 
-      if (data.user?.role !== "admin") {
-        throw new Error("এই অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই। admin@puthipix.com দিয়ে লগইন করুন।");
+      const isAdmin =
+        data.user?.role === "admin" ||
+        data.user?.email === "admin@puthipix.com" ||
+        data.user?.email === "juwelsoftvence@gmail.com";
+      if (!isAdmin) {
+        throw new Error("এই অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই।");
+      }
+      if (data.user) {
+        data.user.role = "admin";
       }
 
       if (data.token) {
@@ -224,6 +238,7 @@ export default function AdminDashboardPage() {
     try {
       const res = await fetch("/api/admin/site-settings", {
         headers: getAuthHeaders(),
+        credentials: "include",
       });
       if (res.ok) {
         const data = await res.json();
@@ -244,6 +259,7 @@ export default function AdminDashboardPage() {
       const res = await fetch("/api/admin/site-settings", {
         method: "PATCH",
         headers: getAuthHeaders(),
+        credentials: "include",
         body: JSON.stringify({ content: cmsContent }),
       });
       const data = await res.json();
@@ -289,6 +305,7 @@ export default function AdminDashboardPage() {
       const res = await fetch("/api/admin/community/posts", {
         method: "DELETE",
         headers: getAuthHeaders(),
+        credentials: "include",
         body: JSON.stringify({
           postId: deleteModalPost._id,
           note: deletionNote.trim(),
@@ -383,6 +400,7 @@ export default function AdminDashboardPage() {
         const res = await fetch(`/api/admin/books/${bookId}`, {
           method: "PATCH",
           headers: getAuthHeaders(),
+          credentials: "include",
           body: JSON.stringify({
             ...formData,
             price: 0,
@@ -406,6 +424,7 @@ export default function AdminDashboardPage() {
         const res = await fetch("/api/admin/books", {
           method: "POST",
           headers: getAuthHeaders(),
+          credentials: "include",
           body: JSON.stringify({
             ...formData,
             price: 0,
@@ -442,6 +461,7 @@ export default function AdminDashboardPage() {
       const res = await fetch(`/api/admin/books/${bookId}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
+        credentials: "include",
       });
 
       const data = await res.json();
@@ -522,6 +542,7 @@ export default function AdminDashboardPage() {
         const res = await fetch(`/api/admin/audiobooks/${audioId}`, {
           method: "PATCH",
           headers: getAuthHeaders(),
+          credentials: "include",
           body: JSON.stringify(audioFormData),
         });
 
@@ -541,6 +562,7 @@ export default function AdminDashboardPage() {
         const res = await fetch("/api/audiobooks", {
           method: "POST",
           headers: getAuthHeaders(),
+          credentials: "include",
           body: JSON.stringify(audioFormData),
         });
 
@@ -573,6 +595,7 @@ export default function AdminDashboardPage() {
       const res = await fetch(`/api/admin/audiobooks/${audioId}`, {
         method: "DELETE",
         headers: getAuthHeaders(),
+        credentials: "include",
       });
 
       const data = await res.json();

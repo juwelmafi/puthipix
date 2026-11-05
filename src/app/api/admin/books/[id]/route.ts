@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdminSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Book } from "@/models/Book";
 import mongoose from "mongoose";
@@ -10,8 +10,8 @@ interface Props {
 
 export async function PATCH(request: Request, { params }: Props) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== "admin") {
+    const session = await getSession(request);
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json({ error: "অননুমোদিত এক্সেস" }, { status: 403 });
     }
 
@@ -49,8 +49,8 @@ export async function PATCH(request: Request, { params }: Props) {
 
 export async function DELETE(request: Request, { params }: Props) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== "admin") {
+    const session = await getSession(request);
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json({ error: "অননুমোদিত এক্সেস" }, { status: 403 });
     }
 

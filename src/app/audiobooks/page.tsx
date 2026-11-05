@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Masthead } from "@/components/layout/Masthead";
 import { Footer } from "@/components/layout/Footer";
 import { AudioCard } from "@/components/audio/AudioCard";
+import { AudioGridSkeleton } from "@/components/ui/Skeletons";
 import { MOCK_AUDIOBOOKS, AUDIO_CATEGORIES } from "@/data/mockAudiobooks";
 import { Headphones, Search, X, Volume2, Sparkles, Filter } from "lucide-react";
 
@@ -13,9 +14,11 @@ export default function AudiobooksPage() {
   const [selectedCopyright, setSelectedCopyright] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "title" | "duration">("newest");
+  const [loading, setLoading] = useState(false);
 
   // Load audiobooks from Database API (with fallback to mock)
   useEffect(() => {
+    setLoading(true);
     fetch("/api/audiobooks")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -23,7 +26,8 @@ export default function AudiobooksPage() {
           setAllAudiobooks(data.audiobooks);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   const filteredAudiobooks = useMemo(() => {
@@ -180,7 +184,9 @@ export default function AudiobooksPage() {
         </div>
 
         {/* Audiobooks Grid: 2 columns on mobile, 3 on tablet, 4 on desktop */}
-        {filteredAudiobooks.length > 0 ? (
+        {loading ? (
+          <AudioGridSkeleton count={8} />
+        ) : filteredAudiobooks.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
             {filteredAudiobooks.map((audiobook) => (
               <AudioCard key={audiobook.id} audiobook={audiobook} />

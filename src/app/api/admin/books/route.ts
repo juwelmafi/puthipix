@@ -1,13 +1,13 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdminSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Book } from "@/models/Book";
 
 export async function POST(request: Request) {
   try {
-    const session = await getSession();
+    const session = await getSession(request);
 
-    if (!session || session.role !== "admin") {
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json(
         { error: "প্রবেশাধিকার সংরক্ষিত: শুধুমাত্র অ্যাডমিন এই কাজটি করতে পারেন" },
         { status: 403 }

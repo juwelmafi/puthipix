@@ -19,6 +19,7 @@ import {
   Feather,
   BookOpen,
 } from "lucide-react";
+import { ReaderSkeleton } from "@/components/ui/Skeletons";
 
 interface ReaderViewProps {
   book: Book;
@@ -331,11 +332,10 @@ function ReaderViewInner({ book }: ReaderViewProps) {
           PUTHIPIX OPEN ARCHIVE • PUBLIC DOMAIN PRESERVATION • DO NOT COMMERCIALIZE
         </div>
 
-        {/* Loading Spinner */}
+        {/* Vintage digitized paper skeleton loading */}
         {loading && (
-          <div className="flex flex-col items-center justify-center py-20 space-y-3 font-serif-bengali">
-            <RotateCw className="w-6 h-6 animate-spin text-[#8a493b]" />
-            <p className="text-xs text-[#53514a]">ডিজিটাইজড পৃষ্ঠা লোড হচ্ছে...</p>
+          <div className="w-full flex justify-center py-6">
+            <ReaderSkeleton />
           </div>
         )}
 

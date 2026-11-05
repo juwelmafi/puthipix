@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdminSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import SiteSettings from "@/models/SiteSettings";
 import { DEFAULT_SITE_CONTENT } from "@/data/defaultSiteContent";
@@ -7,7 +7,7 @@ import { DEFAULT_SITE_CONTENT } from "@/data/defaultSiteContent";
 export async function GET(request: Request) {
   try {
     const session = await getSession(request);
-    if (!session || session.role !== "admin") {
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json(
         { error: "অননুমোদিত: শুধুমাত্র অ্যাডমিন দেখতে পারবেন।" },
         { status: 403 }
@@ -42,7 +42,7 @@ export async function GET(request: Request) {
 export async function PATCH(request: Request) {
   try {
     const session = await getSession(request);
-    if (!session || session.role !== "admin") {
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json(
         { error: "অননুমোদিত: শুধুমাত্র অ্যাডমিন সাইট কনটেন্ট আপডেট করতে পারবেন।" },
         { status: 403 }

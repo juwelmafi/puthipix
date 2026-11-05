@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSession } from "@/lib/auth";
+import { getSession, isAdminSession } from "@/lib/auth";
 import { connectToDatabase } from "@/lib/mongodb";
 import Post from "@/models/Post";
 import Notification from "@/models/Notification";
@@ -7,8 +7,8 @@ import mongoose from "mongoose";
 
 export async function GET(request: Request) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== "admin") {
+    const session = await getSession(request);
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json(
         { error: "প্রবেশাধিকার সংরক্ষিত: শুধুমাত্র অ্যাডমিন দেখতে পারবেন।" },
         { status: 403 }
@@ -45,8 +45,8 @@ export async function GET(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
-    const session = await getSession();
-    if (!session || session.role !== "admin") {
+    const session = await getSession(request);
+    if (!session || !isAdminSession(session)) {
       return NextResponse.json(
         { error: "প্রবেশাধিকার সংরক্ষিত: শুধুমাত্র অ্যাডমিন এই কাজটি করতে পারবেন।" },
         { status: 403 }

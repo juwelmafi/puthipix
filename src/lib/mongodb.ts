@@ -22,17 +22,16 @@ export function normalizeMongoUri(rawUri?: string): string {
   if (!rawUri || !rawUri.trim()) return DIRECT_ATLAS_URI;
   const trimmed = rawUri.trim();
 
-  if (trimmed.startsWith("mongodb+srv://") && trimmed.includes("cluster0.1nozz7u.mongodb.net")) {
-    try {
+  // If ANY mongodb+srv:// URI for cluster 1nozz7u is detected, convert directly to replica set hosts
+  if (trimmed.startsWith("mongodb+srv://")) {
+    if (trimmed.includes("1nozz7u.mongodb.net")) {
       const match = trimmed.match(/mongodb\+srv:\/\/([^:]+):([^@]+)@/);
       if (match) {
         const [, user, pass] = match;
         return `mongodb://${user}:${pass}@ac-96hlkqd-shard-00-00.1nozz7u.mongodb.net:27017,ac-96hlkqd-shard-00-01.1nozz7u.mongodb.net:27017,ac-96hlkqd-shard-00-02.1nozz7u.mongodb.net:27017/puthipix?ssl=true&replicaSet=atlas-sgcr0x-shard-0&authSource=admin&retryWrites=true&w=majority`;
       }
-    } catch {
-      // Fallback below
+      return DIRECT_ATLAS_URI;
     }
-    return DIRECT_ATLAS_URI;
   }
 
   return trimmed;
@@ -70,13 +69,10 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
     cached.promise = mongoose
       .connect(uri, opts)
       .catch(async (err) => {
-        // If querySrv or DNS resolution fails, fall back to direct replica set URI
-        if (
-          (err.message && (err.message.includes("querySrv") || err.message.includes("ECONNREFUSED"))) ||
-          err.code === "ECONNREFUSED"
-        ) {
+        console.warn("Primary MongoDB connection attempt failed:", err.message);
+        if (uri !== DIRECT_ATLAS_URI) {
           console.warn(
-            "MongoDB SRV DNS query refused. Switching automatically to direct replica set connection..."
+            "MongoDB connection encountered DNS/network issue. Falling back to direct replica set URI..."
           );
           return mongoose.connect(DIRECT_ATLAS_URI, opts);
         }
@@ -94,7 +90,8 @@ export async function connectToDatabase(): Promise<typeof mongoose> {
       console.warn("Retrying MongoDB connection with direct replica set hosts...");
       cached.conn = await mongoose.connect(DIRECT_ATLAS_URI, opts);
       return cached.conn;
-    } catch (finalErr) {
+    } catch (finalErr: any) {
+      console.error("Direct replica set connection failed:", finalErr.message);
       throw e;
     }
   }

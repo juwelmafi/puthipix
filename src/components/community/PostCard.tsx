@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { CommentSkeletonList } from "@/components/ui/Skeletons";
 import {
   Heart,
   MessageSquare,
@@ -406,9 +407,7 @@ export function PostCard({ post, currentUser, onPostUpdated }: PostCardProps) {
 
           {/* Comments List */}
           {loadingComments ? (
-            <div className="py-4 text-center">
-              <Loader2 className="w-5 h-5 animate-spin mx-auto text-[#8a493b]" />
-            </div>
+            <CommentSkeletonList count={2} />
           ) : comments.length === 0 ? (
             <p className="text-center py-3 text-xs text-[#7a776e] font-serif-bengali italic">
               এখনও কোনো মন্তব্য নেই। প্রথম মন্তব্যটি আপনিই করুন!

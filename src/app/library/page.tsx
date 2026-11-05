@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect } from "react";
 import { Masthead } from "@/components/layout/Masthead";
 import { Footer } from "@/components/layout/Footer";
 import { BookCard } from "@/components/books/BookCard";
+import { BookGridSkeleton } from "@/components/ui/Skeletons";
 import { MOCK_BOOKS, GENRES } from "@/data/mockBooks";
 import { Search, BookOpen, X, SlidersHorizontal } from "lucide-react";
 
@@ -12,9 +13,11 @@ export default function LibraryPage() {
   const [selectedGenre, setSelectedGenre] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState<"newest" | "title" | "year">("newest");
+  const [loading, setLoading] = useState(false);
 
   // Load books from Database API (with fallback to mock)
   useEffect(() => {
+    setLoading(true);
     fetch("/api/books?limit=100")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
@@ -22,7 +25,8 @@ export default function LibraryPage() {
           setAllBooks(data.books);
         }
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
   // Read genre query param on mount
@@ -163,7 +167,9 @@ export default function LibraryPage() {
         </div>
 
         {/* Books Grid - 2 columns on mobile! */}
-        {filteredBooks.length > 0 ? (
+        {loading ? (
+          <BookGridSkeleton count={8} />
+        ) : filteredBooks.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-6">
             {filteredBooks.map((book) => (
               <BookCard key={book.id} book={book} />

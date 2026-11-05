@@ -126,6 +126,7 @@ export function PostComposer({
       const res = await fetch("/api/community/upload", {
         method: "POST",
         headers,
+        credentials: "include",
         body: formData,
       });
 
@@ -177,6 +178,7 @@ export function PostComposer({
       const res = await fetch("/api/community/posts", {
         method: "POST",
         headers,
+        credentials: "include",
         body: JSON.stringify({
           postTitle: postTitle.trim(),
           genre,
