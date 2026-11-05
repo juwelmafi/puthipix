@@ -91,13 +91,21 @@ export function Masthead() {
                     <span>{user.role === "super_admin" ? "সুপার অ্যাডমিন" : "অ্যাডমিন"}</span>
                   </Link>
                 )}
-                <Link
-                  href="/account"
-                  className="hover:text-[#171717] transition-colors flex items-center gap-1 text-[10px] sm:text-xs truncate max-w-[90px] sm:max-w-none"
-                >
-                  <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                  <span className="truncate">{user.name}</span>
-                </Link>
+                {(user.role === "admin" || user.role === "super_admin") ? (
+                  <Link
+                    href="/account"
+                    className="hover:text-[#171717] transition-colors flex items-center gap-1 text-[10px] sm:text-xs truncate max-w-[90px] sm:max-w-none text-[#8a493b] font-semibold"
+                    title="অ্যাডমিন প্রোফাইল"
+                  >
+                    <User className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                    <span className="truncate">{user.name}</span>
+                  </Link>
+                ) : (
+                  <span className="flex items-center gap-1 text-[10px] sm:text-xs truncate max-w-[90px] sm:max-w-none text-[#53514a]">
+                    <User className="w-2.5 h-2.5 sm:w-3 sm:h-3 opacity-60" />
+                    <span className="truncate">{user.name}</span>
+                  </span>
+                )}
                 <button
                   onClick={handleLogout}
                   className="opacity-60 hover:opacity-100 hover:text-red-700 transition-colors flex items-center text-[9px] sm:text-[10px]"

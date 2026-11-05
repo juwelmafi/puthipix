@@ -37,10 +37,10 @@ export default function LoginPage() {
       }
 
       // Check role
-      if (data.user?.role === "admin") {
-        router.push("/admin");
-      } else {
+      if (data.user?.role === "admin" || data.user?.role === "super_admin") {
         router.push("/account");
+      } else {
+        router.push("/");
       }
       router.refresh();
     } catch (err: any) {
