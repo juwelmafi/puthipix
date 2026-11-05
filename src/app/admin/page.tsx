@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { MOCK_BOOKS } from "@/data/mockBooks";
 import { MOCK_AUDIOBOOKS } from "@/data/mockAudiobooks";
 import {
@@ -27,6 +28,10 @@ import {
   Globe,
   Shield,
   ExternalLink,
+  UserCheck,
+  ShieldAlert,
+  Clock,
+  XCircle,
 } from "lucide-react";
 import { FileUploadZone } from "@/components/admin/FileUploadZone";
 import { CmsContentEditor } from "@/components/admin/CmsContentEditor";
@@ -34,7 +39,13 @@ import { SeoSettingsEditor } from "@/components/admin/SeoSettingsEditor";
 import { DEFAULT_SITE_CONTENT, SiteContent } from "@/data/defaultSiteContent";
 
 export default function AdminDashboardPage() {
-  const [adminTab, setAdminTab] = useState<"books" | "audiobooks" | "community" | "cms" | "seo">("books");
+  const router = useRouter();
+  const [authChecking, setAuthChecking] = useState(true);
+  const [adminTab, setAdminTab] = useState<"books" | "audiobooks" | "community" | "cms" | "seo" | "applications">("books");
+  const [applications, setApplications] = useState<any[]>([]);
+  const [loadingApps, setLoadingApps] = useState(false);
+  const [appFilter, setAppFilter] = useState<"all" | "pending" | "approved" | "rejected">("pending");
+  const [appActionLoading, setAppActionLoading] = useState<string | null>(null);
   const [books, setBooks] = useState<any[]>(MOCK_BOOKS);
   const [audiobooks, setAudiobooks] = useState<any[]>(MOCK_AUDIOBOOKS);
   const [communityPosts, setCommunityPosts] = useState<any[]>([]);
@@ -82,10 +93,12 @@ export default function AdminDashboardPage() {
       if (res.ok) {
         const data = await res.json();
         if (data.authenticated && data.user) {
-          if (
+          if (data.user.email?.toLowerCase().trim() === "juwelhossain16457@gmail.com") {
+            data.user.role = "super_admin";
+          } else if (
             data.user.role === "admin" ||
-            data.user.email === "admin@puthipix.com" ||
-            data.user.email === "juwelsoftvence@gmail.com"
+            data.user.email?.toLowerCase().trim() === "admin@puthipix.com" ||
+            data.user.email?.toLowerCase().trim() === "juwelsoftvence@gmail.com"
           ) {
             data.user.role = "admin";
           }
@@ -98,6 +111,50 @@ export default function AdminDashboardPage() {
     } catch {
       setCurrentUser(null);
       return null;
+    }
+  };
+
+  const fetchApplications = async () => {
+    setLoadingApps(true);
+    try {
+      const res = await fetch("/api/admin/applications", {
+        headers: getAuthHeaders(),
+        credentials: "include",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.applications) {
+          setApplications(data.applications);
+        }
+      }
+    } catch {
+      // Continue
+    } finally {
+      setLoadingApps(false);
+    }
+  };
+
+  const handleApplicationAction = async (id: string, action: "approve" | "reject") => {
+    setAppActionLoading(id);
+    setFormError("");
+    setSuccessMsg("");
+    try {
+      const res = await fetch(`/api/admin/applications/${id}`, {
+        method: "PATCH",
+        headers: getAuthHeaders(),
+        credentials: "include",
+        body: JSON.stringify({ action }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "কার্যক্রম সম্পন্ন করতে ব্যর্থ হয়েছে।");
+      }
+      setSuccessMsg(data.message || `আবেদনটি সফলভাবে ${action === "approve" ? "অনুমোদিত" : "বাতিল"} করা হয়েছে!`);
+      fetchApplications();
+    } catch (err: any) {
+      setFormError(err.message || "সমস্যা হয়েছে। আবার চেষ্টা করুন।");
+    } finally {
+      setAppActionLoading(null);
     }
   };
 
@@ -117,7 +174,11 @@ export default function AdminDashboardPage() {
         throw new Error(data.error || "লগইন ব্যর্থ হয়েছে");
       }
 
+      const isSuper =
+        data.user?.role === "super_admin" ||
+        data.user?.email?.toLowerCase().trim() === "juwelhossain16457@gmail.com";
       const isAdmin =
+        isSuper ||
         data.user?.role === "admin" ||
         data.user?.email === "admin@puthipix.com" ||
         data.user?.email === "juwelsoftvence@gmail.com";
@@ -125,7 +186,7 @@ export default function AdminDashboardPage() {
         throw new Error("এই অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই।");
       }
       if (data.user) {
-        data.user.role = "admin";
+        data.user.role = isSuper ? "super_admin" : "admin";
       }
 
       if (data.token) {
@@ -137,6 +198,9 @@ export default function AdminDashboardPage() {
       setFormError("");
       setSuccessMsg("✅ অ্যাডমিন হিসেবে সফলভাবে লগইন হয়েছেন!");
       fetchCmsContent();
+      if (isSuper) {
+        fetchApplications();
+      }
     } catch (err: any) {
       setLoginError(err.message || "লগইন করতে সমস্যা হয়েছে");
     } finally {
@@ -285,11 +349,24 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    checkAuth();
-    fetchBooks();
-    fetchAudiobooks();
-    fetchCommunityPosts();
-    fetchCmsContent();
+    checkAuth().then((u) => {
+      setAuthChecking(false);
+      if (!u) {
+        router.replace("/login?redirect=/admin");
+        return;
+      }
+      if (u.role !== "admin" && u.role !== "super_admin") {
+        router.replace("/account");
+        return;
+      }
+      fetchBooks();
+      fetchAudiobooks();
+      fetchCommunityPosts();
+      fetchCmsContent();
+      if (u.role === "super_admin") {
+        fetchApplications();
+      }
+    });
   }, []);
 
   const handleDeletePostWithNote = async () => {
@@ -620,6 +697,44 @@ export default function AdminDashboardPage() {
   const totalBooks = books.length;
   const totalPages = books.reduce((acc, b) => acc + (b.pageCount || 100), 0);
 
+  if (authChecking) {
+    return (
+      <div className="min-h-screen bg-[#eeeddb] flex flex-col items-center justify-center p-6 font-serif-bengali">
+        <div className="w-10 h-10 border-2 border-black/20 border-t-[#8a493b] rounded-full animate-spin mb-4" />
+        <h2 className="text-lg font-bold text-[#171717]">অ্যাডমিন নিরাপত্তা ও অনুমোদন যাচাই করা হচ্ছে...</h2>
+        <p className="text-xs text-[#7a776e] mt-1">অনুগ্রহ করে অপেক্ষা করুন</p>
+      </div>
+    );
+  }
+
+  if (!currentUser || (currentUser.role !== "admin" && currentUser.role !== "super_admin")) {
+    return (
+      <div className="min-h-screen bg-[#eeeddb] flex flex-col items-center justify-center p-6 font-serif-bengali">
+        <div className="max-w-md w-full bg-[#f4f2e4] border-2 border-[#171717] p-8 shadow-md text-center space-y-4">
+          <ShieldAlert className="w-12 h-12 text-[#8a493b] mx-auto" />
+          <h2 className="text-2xl font-bold text-[#171717]">প্রবেশাধিকার সংরক্ষিত</h2>
+          <p className="text-xs text-[#53514a] leading-relaxed">
+            এই পেজটি শুধুমাত্র অনুমোদিত অ্যাডমিন ও সুপার অ্যাডমিনের জন্য সংরক্ষিত। আপনার বর্তমান অ্যাকাউন্টে অ্যাডমিন পারমিশন নেই।
+          </p>
+          <div className="pt-2 flex justify-center gap-3">
+            <Link
+              href="/login?redirect=/admin"
+              className="px-4 py-2 bg-[#171717] text-[#eeeddb] text-xs font-bold hover:bg-[#8a493b] transition-colors"
+            >
+              অ্যাডমিন লগইন
+            </Link>
+            <Link
+              href="/account"
+              className="px-4 py-2 border border-black/30 text-xs text-[#171717] hover:bg-black/5"
+            >
+              পাঠক প্রোফাইলে ফিরুন
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-[#eeeddb] flex flex-col font-serif-bengali">
       {/* Admin Top Navigation */}
@@ -644,11 +759,19 @@ export default function AdminDashboardPage() {
             <span>মূল পাঠাগারে ফিরুন</span>
           </Link>
           <span className="opacity-40">•</span>
-          {currentUser && currentUser.role === "admin" ? (
+          {currentUser && (currentUser.role === "admin" || currentUser.role === "super_admin") ? (
             <div className="flex items-center gap-2">
-              <span className="bg-emerald-900 border border-emerald-500/40 text-emerald-100 px-2.5 py-0.5 rounded text-[10px] font-mono-meta uppercase tracking-wider flex items-center gap-1.5 font-bold">
+              <span
+                className={`px-2.5 py-0.5 rounded text-[10px] font-mono-meta uppercase tracking-wider flex items-center gap-1.5 font-bold ${
+                  currentUser.role === "super_admin"
+                    ? "bg-amber-900 border border-amber-400 text-amber-100"
+                    : "bg-emerald-900 border border-emerald-500/40 text-emerald-100"
+                }`}
+              >
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span>{currentUser.name}</span>
+                <span>
+                  {currentUser.name} {currentUser.role === "super_admin" ? "(সুপার অ্যাডমিন)" : "(অ্যাডমিন)"}
+                </span>
               </span>
               <button
                 type="button"
@@ -675,25 +798,6 @@ export default function AdminDashboardPage() {
           )}
         </div>
       </header>
-
-      {/* Unauthenticated / Reader Warning Notice */}
-      {(!currentUser || currentUser.role !== "admin") && (
-        <div className="bg-amber-100 border-b-2 border-amber-500 px-4 sm:px-8 py-2.5 text-amber-950 text-xs font-serif-bengali flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-700 shrink-0" />
-            <span>
-              <strong>অ্যাডমিন প্রমাণীকরণ প্রয়োজন:</strong> আপনি বর্তমানে অ্যাডমিন হিসেবে লগইন করা নেই। সাইটের কনটেন্ট, বই বা সেটিংস সংরক্ষণ করতে অনুগ্রহ করে লগইন করুন।
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setShowLoginModal(true)}
-            className="px-3 py-1 bg-[#8a493b] text-white text-xs font-bold shrink-0 hover:bg-[#171717] transition-colors rounded-xs shadow-xs"
-          >
-            অ্যাডমিন লগইন করুন →
-          </button>
-        </div>
-      )}
 
       {/* Main Admin 2-Column Workspace with Left Sticky Sidebar */}
       <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6 flex-grow">
@@ -815,6 +919,36 @@ export default function AdminDashboardPage() {
                   SEO
                 </span>
               </button>
+
+              {/* Super Admin Only: Admin Applications Governance */}
+              {currentUser?.role === "super_admin" && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAdminTab("applications");
+                    fetchApplications();
+                  }}
+                  className={`w-full text-left px-3 py-2.5 flex items-center justify-between transition-all border-l-2 ${
+                    adminTab === "applications"
+                      ? "bg-[#171717] text-[#eeeddb] font-bold shadow-xs border-[#e8c078]"
+                      : "bg-amber-100/60 text-amber-950 hover:bg-amber-200/60 border-transparent font-medium"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <UserCheck className="w-4 h-4 text-amber-800" />
+                    <span>অ্যাডমিন আবেদন ও অনুমোদন</span>
+                  </div>
+                  {applications.filter((a) => a.status === "pending").length > 0 ? (
+                    <span className="text-[10px] font-mono-meta px-1.5 py-0.2 rounded-full font-bold bg-[#8a493b] text-white animate-pulse">
+                      {applications.filter((a) => a.status === "pending").length}
+                    </span>
+                  ) : (
+                    <span className="text-[9px] uppercase font-mono-meta bg-amber-600/20 text-amber-900 px-1.5 py-0.2 rounded font-bold">
+                      SUPER
+                    </span>
+                  )}
+                </button>
+              )}
             </nav>
 
             {/* Quick Metrics */}
@@ -1243,6 +1377,172 @@ export default function AdminDashboardPage() {
             onResetDefaults={handleResetCmsDefaults}
             isSaving={isSavingCms}
           />
+        )}
+
+        {/* Super Admin Applications Management View */}
+        {adminTab === "applications" && currentUser?.role === "super_admin" && (
+          <div className="space-y-6 font-serif-bengali">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[rgba(23,23,23,0.18)]">
+              <div>
+                <span className="font-mono-meta text-[10px] uppercase tracking-wider text-[#8a493b] font-bold">
+                  SUPER ADMIN GOVERNANCE
+                </span>
+                <h2 className="text-2xl font-bold text-[#171717]">অ্যাডমিন আবেদন ও অনুমোদন কেন্দ্র</h2>
+                <p className="text-xs text-[#53514a]">
+                  গোপন পোর্টাল (/admin-apply) থেকে জমা হওয়া আবেদনসমূহ। শুধুমাত্র প্রধান সুপার অ্যাডমিন কোনো আবেদন অনুমোদন বা বাতিল করতে পারেন।
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchApplications}
+                  className="px-3.5 py-1.5 bg-[#171717] hover:bg-[#8a493b] text-[#eeeddb] text-xs font-mono-meta font-bold transition-colors shadow-xs"
+                >
+                  তালিকা রিফ্রেশ
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs */}
+            <div className="flex flex-wrap items-center gap-2 border-b border-black/10 pb-3">
+              {(
+                [
+                  { id: "pending", label: "বিচারাধীন আবেদন", count: applications.filter((a) => a.status === "pending").length },
+                  { id: "all", label: "সকল আবেদন", count: applications.length },
+                  { id: "approved", label: "অনুমোদিত অ্যাডমিন", count: applications.filter((a) => a.status === "approved").length },
+                  { id: "rejected", label: "বাতিলকৃত", count: applications.filter((a) => a.status === "rejected").length },
+                ] as const
+              ).map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setAppFilter(tab.id)}
+                  className={`px-3 py-1.5 text-xs font-mono-meta uppercase transition-all rounded-xs flex items-center gap-1.5 ${
+                    appFilter === tab.id
+                      ? "bg-[#8a493b] text-white font-bold"
+                      : "bg-[#e8e6d3] text-[#53514a] hover:bg-[#dedbc5]"
+                  }`}
+                >
+                  <span>{tab.label}</span>
+                  <span className="px-1.5 py-0.2 bg-black/15 rounded-full text-[10px]">
+                    {tab.count}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Loading */}
+            {loadingApps && (
+              <div className="p-8 text-center text-xs text-[#53514a] bg-[#f4f2e4] border border-black/10">
+                আবেদনসমূহ লোড হচ্ছে...
+              </div>
+            )}
+
+            {/* Applications List */}
+            {!loadingApps && (
+              <div className="space-y-4">
+                {applications.filter((a) => appFilter === "all" || a.status === appFilter).length === 0 ? (
+                  <div className="p-12 text-center text-xs text-[#7a776e] bg-[#f4f2e4] border border-black/10 space-y-2">
+                    <UserCheck className="w-8 h-8 text-[#7a776e] mx-auto opacity-40" />
+                    <p>এই ফিল্টারে কোনো আবেদন পাওয়া যায়নি।</p>
+                  </div>
+                ) : (
+                  applications
+                    .filter((a) => appFilter === "all" || a.status === appFilter)
+                    .map((app) => (
+                      <div
+                        key={app._id}
+                        className="bg-[#f4f2e4] border-2 border-[#171717] p-5 shadow-sm space-y-3"
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-black/10 pb-3">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-base font-bold text-[#171717]">{app.name}</h4>
+                              <span
+                                className={`px-2 py-0.5 text-[10px] font-mono-meta uppercase tracking-wider font-bold rounded-xs ${
+                                  app.status === "pending"
+                                    ? "bg-amber-100 text-amber-900 border border-amber-300"
+                                    : app.status === "approved"
+                                    ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
+                                    : "bg-red-100 text-red-900 border border-red-300"
+                                }`}
+                              >
+                                {app.status === "pending"
+                                  ? "বিচারাধীন (Pending Approval)"
+                                  : app.status === "approved"
+                                  ? "অনুমোদিত অ্যাডমিন"
+                                  : "বাতিলকৃত"}
+                              </span>
+                            </div>
+                            <div className="text-xs font-mono-meta text-[#7a776e] flex flex-wrap gap-x-4 gap-y-1 mt-1">
+                              <span>ইমেইল: {app.email}</span>
+                              {app.phone && <span>মোবাইল: {app.phone}</span>}
+                              <span>
+                                আবেদনের সময়: {new Date(app.createdAt).toLocaleDateString("bn-BD", {
+                                  year: "numeric",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Action Buttons for Pending Applicants */}
+                          {app.status === "pending" && (
+                            <div className="flex items-center gap-2 shrink-0">
+                              <button
+                                type="button"
+                                disabled={appActionLoading === app._id}
+                                onClick={() => handleApplicationAction(app._id, "approve")}
+                                className="px-3.5 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold font-serif-bengali flex items-center gap-1 transition-colors disabled:opacity-50 shadow-xs"
+                              >
+                                <CheckCircle className="w-3.5 h-3.5" />
+                                <span>{appActionLoading === app._id ? "হচ্ছে..." : "অনুমোদন করুন (Approve)"}</span>
+                              </button>
+                              <button
+                                type="button"
+                                disabled={appActionLoading === app._id}
+                                onClick={() => handleApplicationAction(app._id, "reject")}
+                                className="px-3.5 py-1.5 bg-red-700 hover:bg-red-800 text-white text-xs font-bold font-serif-bengali flex items-center gap-1 transition-colors disabled:opacity-50 shadow-xs"
+                              >
+                                <XCircle className="w-3.5 h-3.5" />
+                                <span>বাতিল (Reject)</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Reason */}
+                        <div className="text-xs space-y-1 text-[#262626]">
+                          <span className="font-bold text-[#8a493b] block">অ্যাডমিন হতে চাওয়ার কারণ:</span>
+                          <p className="bg-[#ede9d6] p-3 border border-black/10 whitespace-pre-line leading-relaxed">
+                            {app.reason}
+                          </p>
+                        </div>
+
+                        {/* Experience */}
+                        {app.experience && (
+                          <div className="text-xs space-y-1 text-[#262626]">
+                            <span className="font-bold text-[#53514a] block">পূর্ব অভিজ্ঞতা ও দক্ষতা:</span>
+                            <p className="bg-[#ede9d6] p-2.5 border border-black/10 whitespace-pre-line leading-relaxed text-[#53514a]">
+                              {app.experience}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Review info if approved/rejected */}
+                        {app.reviewNote && (
+                          <div className="text-[11px] text-[#7a776e] pt-1">
+                            <strong>সুপার অ্যাডমিনের সিদ্ধান্ত:</strong> {app.reviewNote}
+                          </div>
+                        )}
+                      </div>
+                    ))
+                )}
+              </div>
+            )}
+          </div>
         )}
       </main>
     </div>

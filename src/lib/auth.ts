@@ -6,10 +6,17 @@ const AUTH_SECRET = process.env.AUTH_SECRET || "puthipix_fallback_secret_develop
 const TOKEN_COOKIE_NAME = "puthipix_session_token";
 
 /**
- * Designated Super-Admin Emails.
- * Any authenticated user with an email in this list is guaranteed administrative privileges.
+ * Super Admin Email.
+ * Sole authority with power to approve or reject admin applications and maintain system governance.
+ */
+export const SUPER_ADMIN_EMAIL = "juwelhossain16457@gmail.com";
+
+/**
+ * Designated Admin Emails.
+ * Authenticated users with emails in this list have administrative access.
  */
 export const ADMIN_EMAILS: string[] = [
+  SUPER_ADMIN_EMAIL,
   "admin@puthipix.com",
   "juwelsoftvence@gmail.com",
   ...(process.env.ADMIN_EMAILS
@@ -21,7 +28,7 @@ export interface SessionPayload {
   userId: string;
   name: string;
   email: string;
-  role: "user" | "admin";
+  role: "user" | "admin" | "super_admin";
 }
 
 /**
@@ -33,11 +40,30 @@ export function isAdminEmail(email?: string): boolean {
 }
 
 /**
- * Validates whether a given session belongs to an administrator.
+ * Checks whether an email or session belongs to the Super Admin.
  */
-export function isAdminSession(session?: SessionPayload | null): boolean {
+export function isSuperAdmin(
+  session?: { email?: string; role?: string } | null
+): boolean {
   if (!session) return false;
-  if (session.role === "admin") return true;
+  if (session.role === "super_admin") return true;
+  if (
+    session.email &&
+    session.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase()
+  ) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Validates whether a given session belongs to an administrator or super administrator.
+ */
+export function isAdminSession(
+  session?: { email?: string; role?: string } | null
+): boolean {
+  if (!session) return false;
+  if (session.role === "admin" || session.role === "super_admin") return true;
   return isAdminEmail(session.email);
 }
 
@@ -54,7 +80,13 @@ export async function comparePassword(password: string, hash: string): Promise<b
 
 // Create JWT Token
 export function signToken(payload: SessionPayload): string {
-  const role: "user" | "admin" = isAdminEmail(payload.email) ? "admin" : (payload.role || "user");
+  let role: "user" | "admin" | "super_admin" = payload.role || "user";
+  if (payload.email && payload.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+    role = "super_admin";
+  } else if (isAdminEmail(payload.email) && role !== "super_admin") {
+    role = "admin";
+  }
+
   return jwt.sign({ ...payload, role }, AUTH_SECRET, {
     expiresIn: "30d",
   });
@@ -64,8 +96,12 @@ export function signToken(payload: SessionPayload): string {
 export function verifyToken(token: string): SessionPayload | null {
   try {
     const payload = jwt.verify(token, AUTH_SECRET) as SessionPayload;
-    if (payload && payload.email && isAdminEmail(payload.email)) {
-      payload.role = "admin";
+    if (payload && payload.email) {
+      if (payload.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+        payload.role = "super_admin";
+      } else if (isAdminEmail(payload.email) && payload.role !== "super_admin") {
+        payload.role = "admin";
+      }
     }
     return payload;
   } catch (error) {
@@ -75,7 +111,7 @@ export function verifyToken(token: string): SessionPayload | null {
 
 /**
  * Retrieves the current logged-in user session from either the HTTP cookie or Authorization header.
- * Checks both mechanisms and elevates admin rights if the user email matches ADMIN_EMAILS.
+ * Automatically assigns super_admin or admin roles based on email whitelist.
  */
 export async function getSession(request?: Request): Promise<SessionPayload | null> {
   try {
@@ -102,7 +138,9 @@ export async function getSession(request?: Request): Promise<SessionPayload | nu
     if (bearerToken) {
       const session = verifyToken(bearerToken);
       if (session) {
-        if (isAdminEmail(session.email)) {
+        if (session.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+          session.role = "super_admin";
+        } else if (isAdminEmail(session.email) && session.role !== "super_admin") {
           session.role = "admin";
         }
         return session;
@@ -113,7 +151,9 @@ export async function getSession(request?: Request): Promise<SessionPayload | nu
     if (cookieToken) {
       const session = verifyToken(cookieToken);
       if (session) {
-        if (isAdminEmail(session.email)) {
+        if (session.email.toLowerCase().trim() === SUPER_ADMIN_EMAIL.toLowerCase()) {
+          session.role = "super_admin";
+        } else if (isAdminEmail(session.email) && session.role !== "super_admin") {
           session.role = "admin";
         }
         return session;

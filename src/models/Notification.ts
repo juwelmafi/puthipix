@@ -5,7 +5,7 @@ export interface INotification extends Document {
   sender: mongoose.Types.ObjectId; // User who triggered notification
   senderName: string;
   senderAvatar?: string;
-  type: "like" | "comment" | "admin_deletion";
+  type: "like" | "comment" | "admin_deletion" | "admin_approval" | "admin_rejection";
   postId?: mongoose.Types.ObjectId;
   postTitle?: string;
   message: string;
@@ -39,7 +39,7 @@ const NotificationSchema = new Schema<INotification>(
     },
     type: {
       type: String,
-      enum: ["like", "comment", "admin_deletion"],
+      enum: ["like", "comment", "admin_deletion", "admin_approval", "admin_rejection"],
       required: true,
       index: true,
     },

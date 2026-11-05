@@ -82,13 +82,13 @@ export function Masthead() {
                 {/* Notification Dropdown Component */}
                 <NotificationDropdown />
 
-                {user.role === "admin" && (
+                {(user.role === "admin" || user.role === "super_admin") && (
                   <Link
                     href="/admin"
                     className="text-[#8a493b] font-bold hover:underline flex items-center gap-0.5 uppercase text-[9px] sm:text-[10px]"
                   >
                     <Shield className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                    <span>অ্যাডমিন</span>
+                    <span>{user.role === "super_admin" ? "সুপার অ্যাডমিন" : "অ্যাডমিন"}</span>
                   </Link>
                 )}
                 <Link

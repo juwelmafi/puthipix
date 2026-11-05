@@ -41,11 +41,16 @@ export async function POST(request: Request) {
       );
     }
 
+    const role =
+      user.email.toLowerCase() === "juwelhossain16457@gmail.com"
+        ? "super_admin"
+        : user.role;
+
     const token = signToken({
       userId: user._id.toString(),
       name: user.name,
       email: user.email,
-      role: user.role,
+      role,
     });
 
     const response = NextResponse.json({
@@ -55,7 +60,7 @@ export async function POST(request: Request) {
         id: user._id.toString(),
         name: user.name,
         email: user.email,
-        role: user.role,
+        role,
       },
     });
 
