@@ -11,6 +11,7 @@ export interface IBook extends Document {
   coverKey?: string;
   coverImage: string;
   pdfKey?: string;
+  pdfUrl?: string;
   price: number;
   accessType: "free" | "premium";
   published: boolean;
@@ -80,6 +81,10 @@ const BookSchema = new Schema<IBook>(
       required: [true, "Cover image is required"],
     },
     pdfKey: {
+      type: String,
+      default: "",
+    },
+    pdfUrl: {
       type: String,
       default: "",
     },

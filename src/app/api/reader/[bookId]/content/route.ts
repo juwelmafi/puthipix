@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import { Book } from "@/models/Book";
 import { MOCK_BOOKS } from "@/data/mockBooks";
-import { getFileStreamFromR2, isR2Configured } from "@/lib/storage";
+import { getFileStreamFromR2, isR2Configured, getPresignedReadUrl } from "@/lib/storage";
+import mongoose from "mongoose";
 import fs from "fs";
 import path from "path";
 
@@ -18,23 +19,48 @@ export async function GET(request: Request, { params }: Props) {
 
     try {
       await connectToDatabase();
-      book = await Book.findById(bookId);
+      if (mongoose.Types.ObjectId.isValid(bookId)) {
+        book = await Book.findById(bookId).lean();
+      }
+      if (!book) {
+        book = await Book.findOne({
+          $or: [{ slug: bookId }, { id: bookId }]
+        }).lean();
+      }
+      // If bookId is like bk-01, lookup mock slug and find real updated book in DB
+      if (!book && bookId.startsWith("bk-")) {
+        const mockMatch = MOCK_BOOKS.find((b) => b.id === bookId);
+        if (mockMatch?.slug) {
+          book = await Book.findOne({ slug: mockMatch.slug }).lean();
+        }
+      }
     } catch (e) {
-      // Ignore DB error, fallback to mock
+      console.error("DB lookup error in reader content route:", e);
     }
 
     if (!book) {
-      book = MOCK_BOOKS.find((b) => b.id === bookId);
+      book = MOCK_BOOKS.find((b) => b.id === bookId || b.slug === bookId);
     }
 
     if (!book) {
       return NextResponse.json({ error: "গ্রন্থটি পাওয়া যায়নি" }, { status: 404 });
     }
 
-    // 1. If book has a pdfKey and R2 is configured, stream from R2
-    if (book.pdfKey && isR2Configured()) {
+    // 1. Direct PDF URL if already full public URL
+    if (book.pdfUrl && book.pdfUrl.startsWith("http")) {
+      return NextResponse.redirect(book.pdfUrl, 307);
+    }
+
+    // 2. If book has a pdfKey and R2 is configured, redirect to presigned read URL or stream
+    const r2Key = book.pdfKey || (book.pdfUrl && !book.pdfUrl.startsWith("http") ? book.pdfUrl : null);
+    if (r2Key && isR2Configured()) {
       try {
-        const stream = await getFileStreamFromR2(book.pdfKey);
+        const presignedUrl = await getPresignedReadUrl(r2Key, 3600);
+        if (presignedUrl) {
+          return NextResponse.redirect(presignedUrl, 307);
+        }
+
+        const stream = await getFileStreamFromR2(r2Key);
         return new Response(stream as any, {
           headers: {
             "Content-Type": "application/pdf",
@@ -48,7 +74,7 @@ export async function GET(request: Request, { params }: Props) {
       }
     }
 
-    // 2. Development fallback: Stream local sample PDF from project root
+    // 3. Development fallback: Stream local sample PDF from project root
     const samplePath = path.join(process.cwd(), "digital_book_reading_platform_complete_walkthrough.pdf");
     if (fs.existsSync(samplePath)) {
       const fileBuffer = fs.readFileSync(samplePath);

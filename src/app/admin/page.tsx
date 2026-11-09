@@ -1703,7 +1703,7 @@ export default function AdminDashboardPage() {
                   accept="application/pdf,.pdf"
                   type="pdf"
                   destination="r2"
-                  currentValue={formData.pdfUrl}
+                  currentValue={formData.pdfUrl || formData.pdfKey}
                   helperText="সম্পূর্ণ বইয়ের মূল পিডিএফ সরাসরি Cloudflare R2 বাকেটে সংরক্ষিত হবে ($0 ব্যান্ডউইথ খরচ)"
                   onUploadComplete={(url, key) =>
                     setFormData((prev) => ({
@@ -1886,7 +1886,7 @@ export default function AdminDashboardPage() {
                   accept="audio/mpeg,audio/mp3,audio/m4a,audio/wav,audio/aac"
                   type="audio"
                   destination="r2"
-                  currentValue={audioFormData.audioUrl}
+                  currentValue={audioFormData.audioUrl || audioFormData.audioKey}
                   helperText="অডিও ফাইল সরাসরি Cloudflare R2 বাকেটে সংরক্ষিত ও স্ট্রিম হবে"
                   onUploadComplete={(url, key) =>
                     setAudioFormData((prev) => ({

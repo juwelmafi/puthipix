@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import {
   UploadCloud,
@@ -39,6 +39,27 @@ export function FileUploadZone({
   const [fileSize, setFileSize] = useState<string>("");
   const [previewUrl, setPreviewUrl] = useState<string>(currentValue || "");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    setPreviewUrl(currentValue || "");
+    if (!currentValue) {
+      setFileName("");
+      setFileSize("");
+    }
+  }, [currentValue]);
+
+  const getDisplayFileName = (fallback: string) => {
+    if (fileName) return fileName;
+    if (!previewUrl) return fallback;
+    const parts = previewUrl.split("/");
+    const lastPart = parts[parts.length - 1] || "";
+    try {
+      const decoded = decodeURIComponent(lastPart).replace(/^\d+-/, "");
+      return decoded || fallback;
+    } catch {
+      return lastPart || fallback;
+    }
+  };
 
   const formatSize = (bytes: number) => {
     if (bytes < 1024 * 1024) {
@@ -315,7 +336,7 @@ export function FileUploadZone({
                     <span>পিডিএফ ক্লাউডফ্লেয়ার R2-তে সংরক্ষিত</span>
                   </div>
                   <p className="text-[11px] font-mono-meta text-[#171717] truncate">
-                    {fileName || "uploaded-book.pdf"} {fileSize ? `(${fileSize})` : ""}
+                    {getDisplayFileName("uploaded-book.pdf")} {fileSize ? `(${fileSize})` : ""}
                   </p>
                 </div>
               </div>
@@ -343,7 +364,7 @@ export function FileUploadZone({
                       <span>অডিও Cloudflare R2-তে আপলোড হয়েছে</span>
                     </div>
                     <p className="text-[10px] font-mono-meta text-[#171717] truncate">
-                      {fileName || "audio-track.mp3"} {fileSize ? `(${fileSize})` : ""}
+                      {getDisplayFileName("audio-track.mp3")} {fileSize ? `(${fileSize})` : ""}
                     </p>
                   </div>
                 </div>
