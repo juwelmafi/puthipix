@@ -104,6 +104,27 @@ export async function getPresignedReadUrl(
 }
 
 /**
+ * Generate temporary presigned upload URL for direct browser-to-R2 upload (Bypasses Vercel 4.5MB limit)
+ */
+export async function getPresignedUploadUrl(
+  key: string,
+  contentType: string,
+  expiresInSeconds = 3600
+): Promise<string> {
+  if (!isR2Configured()) {
+    return "";
+  }
+
+  const command = new PutObjectCommand({
+    Bucket: R2_BUCKET_NAME,
+    Key: key,
+    ContentType: contentType,
+  });
+
+  return getSignedUrl(r2Client, command, { expiresIn: expiresInSeconds });
+}
+
+/**
  * Delete a file from Cloudflare R2
  */
 export async function deleteFromR2(key: string): Promise<boolean> {

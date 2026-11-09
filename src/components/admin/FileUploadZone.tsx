@@ -63,41 +63,130 @@ export function FileUploadZone({
     }
 
     try {
+      const token = typeof window !== "undefined" ? localStorage.getItem("puthipix_session_token") : null;
+      const authHeaders: Record<string, string> = {};
+      if (token) authHeaders["Authorization"] = `Bearer ${token}`;
+
+      // 1. Direct Presigned Upload for Cloudflare R2 (Bypasses Vercel 4.5MB limit)
+      if (destination === "r2") {
+        const presignRes = await fetch("/api/admin/uploads/presign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...authHeaders,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            filename: file.name,
+            type,
+            contentType: file.type || (type === "pdf" ? "application/pdf" : "audio/mpeg"),
+          }),
+        });
+
+        const presignContentType = presignRes.headers.get("content-type") || "";
+        let presignData: any = {};
+        if (presignContentType.includes("application/json")) {
+          presignData = await presignRes.json().catch(() => ({}));
+        } else {
+          const rawText = await presignRes.text().catch(() => "");
+          if (presignRes.status === 413 || rawText.includes("Request Entity Too Large")) {
+            throw new Error("ফাইলের নাম বা রিকোয়েস্ট সাইজ অত্যধিক বড়।");
+          }
+          throw new Error(rawText || `সার্ভার ত্রুটি: ${presignRes.status}`);
+        }
+
+        if (!presignRes.ok) {
+          throw new Error(presignData.error || "প্রিসাইন ইউআরএল পেতে সমস্যা হয়েছে");
+        }
+
+        if (presignData.direct && presignData.uploadUrl) {
+          try {
+            const r2Res = await fetch(presignData.uploadUrl, {
+              method: "PUT",
+              headers: {
+                "Content-Type": file.type || (type === "pdf" ? "application/pdf" : "audio/mpeg"),
+              },
+              body: file,
+            });
+
+            if (!r2Res.ok) {
+              throw new Error(`Cloudflare R2 আপলোড ব্যর্থ হয়েছে (HTTP ${r2Res.status})`);
+            }
+
+            const uploadedUrl = presignData.url || presignData.key;
+            setPreviewUrl(uploadedUrl);
+            onUploadComplete(uploadedUrl, presignData.key);
+            return;
+          } catch (r2Err: any) {
+            console.error("Direct R2 upload error:", r2Err);
+            if (
+              r2Err.name === "TypeError" &&
+              (r2Err.message?.includes("fetch") || r2Err.message?.includes("NetworkError"))
+            ) {
+              throw new Error(
+                "Cloudflare R2 বাকেটে সরাসরি আপলোড করতে ব্রাউজার অনুমতি দেয়নি (CORS)। Cloudflare ড্যাশবোর্ডে R2 Bucket Settings > CORS Policy সক্রিয় আছে কিনা পরীক্ষা করুন।"
+              );
+            }
+            throw r2Err;
+          }
+        }
+
+        // If direct is false (e.g. R2 credentials not configured on server)
+        if (file.size > 4.5 * 1024 * 1024) {
+          throw new Error(
+            "ফাইলের সাইজ ৪.৫ MB-এর বেশি। Vercel সার্ভারলেসের সীমাবদ্ধতার কারণে এত বড় ফাইল আপলোড করতে Cloudflare R2 এনভায়রনমেন্ট ভেরিয়েবল সেট করা আবশ্যক।"
+          );
+        }
+      }
+
+      // 2. Server-side upload route (for Cloudinary images or fallback)
       const formData = new FormData();
       formData.append("file", file);
 
       let endpoint = "/api/admin/uploads";
       if (destination === "cloudinary") {
+        if (file.size > 10 * 1024 * 1024) {
+          throw new Error("ছবির সাইজ সর্বোচ্চ ১০ মেগাবাইট হতে পারবে।");
+        }
         endpoint = "/api/admin/uploads/image";
         formData.append("folder", "puthipix/covers");
       } else {
         formData.append("type", type);
       }
 
-      const token = typeof window !== "undefined" ? localStorage.getItem("puthipix_session_token") : null;
-      const headers: Record<string, string> = {};
-      if (token) headers["Authorization"] = `Bearer ${token}`;
-
       const res = await fetch(endpoint, {
         method: "POST",
-        headers,
+        headers: authHeaders,
         credentials: "include",
         body: formData,
       });
 
-      const data = await res.json();
+      const contentTypeHeader = res.headers.get("content-type") || "";
+      let data: any = {};
+      if (contentTypeHeader.includes("application/json")) {
+        data = await res.json().catch(() => ({}));
+      } else {
+        const text = await res.text().catch(() => "");
+        if (res.status === 413 || text.includes("Request Entity Too Large") || text.startsWith("Request En")) {
+          throw new Error("ফাইলের সাইজ ৪.৫ MB-এর বেশি (Request Entity Too Large)। সরাসরি Cloudflare R2 কনফিগারেশন প্রয়োজন।");
+        }
+        throw new Error(text || `সার্ভার এরর: ${res.status}`);
+      }
 
       if (!res.ok) {
-        throw new Error(data.error || "ফাইল আপলোড করতে সমস্যা হয়েছে");
+        throw new Error(data.error || "ফাইল আপলোড করতে সমস্যা হয়েছে");
       }
 
       const uploadedUrl = data.url || data.key;
       setPreviewUrl(uploadedUrl);
       onUploadComplete(uploadedUrl, data.key);
     } catch (err: any) {
-      setUploadError(err.message || "আপলোড ব্যর্থ হয়েছে");
+      setUploadError(err.message || "আপলোড ব্যর্থ হয়েছে");
       setPreviewUrl(currentValue || "");
     } finally {
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
       setIsUploading(false);
     }
   };
