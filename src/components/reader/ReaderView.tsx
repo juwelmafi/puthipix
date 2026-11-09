@@ -54,7 +54,7 @@ function ReaderViewInner({ book }: ReaderViewProps) {
         pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
 
         const loadingTask = pdfjsLib.getDocument({
-          url: `/api/reader/${book.id}/content`,
+          url: `/api/reader/${book.id}/content?t=${Date.now()}`,
           cMapUrl: "https://cdn.jsdelivr.net/npm/pdfjs-dist@6.5.438/cmaps/",
           cMapPacked: true,
         });

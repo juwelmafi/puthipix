@@ -48,7 +48,12 @@ export async function GET(request: Request, { params }: Props) {
 
     // 1. Direct PDF URL if already full public URL
     if (book.pdfUrl && book.pdfUrl.startsWith("http")) {
-      return NextResponse.redirect(book.pdfUrl, 307);
+      return NextResponse.redirect(book.pdfUrl, {
+        status: 307,
+        headers: {
+          "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+        },
+      });
     }
 
     // 2. If book has a pdfKey and R2 is configured, redirect to presigned read URL or stream
@@ -57,7 +62,12 @@ export async function GET(request: Request, { params }: Props) {
       try {
         const presignedUrl = await getPresignedReadUrl(r2Key, 3600);
         if (presignedUrl) {
-          return NextResponse.redirect(presignedUrl, 307);
+          return NextResponse.redirect(presignedUrl, {
+            status: 307,
+            headers: {
+              "Cache-Control": "no-cache, no-store, max-age=0, must-revalidate",
+            },
+          });
         }
 
         const stream = await getFileStreamFromR2(r2Key);
